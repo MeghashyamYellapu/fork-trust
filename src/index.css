@@ -2,41 +2,59 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Import fonts for accessibility and better readability */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Telugu:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap');
 
+/* Farm-to-Fork Platform Design System */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Agricultural Theme Colors */
+    --background: 120 20% 97%;
+    --foreground: 120 10% 15%;
 
+    /* Fresh Green Theme */
+    --primary: 142 76% 36%;
+    --primary-foreground: 0 0% 98%;
+    --primary-light: 142 76% 45%;
+    --primary-dark: 142 76% 28%;
+
+    /* Earth Tones */
+    --secondary: 39 77% 83%;
+    --secondary-foreground: 39 77% 15%;
+    
+    --accent: 142 76% 92%;
+    --accent-foreground: 142 76% 20%;
+
+    /* Status Colors */
+    --success: 142 76% 36%;
+    --warning: 45 93% 47%;
+    --error: 0 84% 60%;
+    --info: 217 91% 60%;
+
+    /* Card and UI Elements */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 120 10% 15%;
+    --muted: 120 20% 95%;
+    --muted-foreground: 120 10% 45%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    /* Borders and Inputs */
+    --border: 120 20% 88%;
+    --input: 120 20% 88%;
+    --ring: 142 76% 36%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Gradients */
+    --gradient-farm: linear-gradient(135deg, hsl(142 76% 36%) 0%, hsl(142 76% 45%) 50%, hsl(120 50% 40%) 100%);
+    --gradient-earth: linear-gradient(135deg, hsl(39 77% 83%) 0%, hsl(39 77% 70%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(142 76% 36%) 0%, hsl(120 50% 40%) 100%);
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Shadows */
+    --shadow-soft: 0 4px 6px -1px hsl(120 10% 15% / 0.1);
+    --shadow-medium: 0 10px 15px -3px hsl(120 10% 15% / 0.1);
+    --shadow-large: 0 25px 50px -12px hsl(120 10% 15% / 0.25);
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-
-    --radius: 0.5rem;
+    /* Border Radius */
+    --radius: 0.75rem;
+    --radius-large: 1.5rem;
 
     --sidebar-background: 0 0% 98%;
 
@@ -56,41 +74,146 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 120 10% 8%;
+    --foreground: 120 20% 95%;
+    
+    --primary: 142 76% 45%;
+    --primary-foreground: 120 10% 8%;
+    
+    --card: 120 10% 12%;
+    --card-foreground: 120 20% 95%;
+    
+    --muted: 120 10% 15%;
+    --muted-foreground: 120 10% 65%;
+    
+    --border: 120 10% 20%;
+    --input: 120 10% 20%;
+  }
+}
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+/* Accessibility and User-Friendly Styles */
+@layer base {
+  * {
+    @apply border-border;
+  }
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', 'Noto Sans Telugu', 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 16px; /* Larger base font for accessibility */
+    line-height: 1.6;
+  }
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+  /* Focus styles for keyboard navigation */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2;
+  }
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+  /* High contrast text for readability */
+  .text-large {
+    @apply text-xl md:text-2xl font-medium;
+  }
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+  .text-hero {
+    @apply text-3xl md:text-5xl lg:text-6xl font-bold leading-tight;
+  }
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+  ::-webkit-scrollbar-track {
+    @apply bg-muted;
+  }
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+  ::-webkit-scrollbar-thumb {
+    @apply bg-primary rounded-full;
+  }
+}
+
+/* Component Utilities */
+@layer components {
+  .btn-primary {
+    @apply bg-primary hover:bg-primary-dark text-primary-foreground px-6 py-3 rounded-lg font-medium text-lg shadow-soft transition-all duration-200 hover:shadow-medium;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary hover:bg-secondary/80 text-secondary-foreground px-6 py-3 rounded-lg font-medium text-lg shadow-soft transition-all duration-200;
+  }
+
+  .btn-hero {
+    @apply bg-gradient-to-r from-primary to-primary-light hover:from-primary-dark hover:to-primary text-primary-foreground px-8 py-4 rounded-xl font-semibold text-xl shadow-medium transition-all duration-300 hover:shadow-large hover:scale-105;
+  }
+
+  .card-elevated {
+    @apply bg-card border border-border rounded-xl p-6 shadow-soft hover:shadow-medium transition-all duration-200;
+  }
+
+  .gradient-bg {
+    background: var(--gradient-farm);
+  }
+
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+
+  /* Icon container for better accessibility */
+  .icon-large {
+    @apply w-16 h-16 md:w-20 md:h-20;
+  }
+
+  .icon-medium {
+    @apply w-12 h-12 md:w-16 md:h-16;
+  }
+
+  /* Animation utilities */
+  .animate-fade-in {
+    animation: fadeIn 0.6s ease-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.8s ease-out;
+  }
+
+  .animate-bounce-gentle {
+    animation: bounceGentle 2s infinite;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bounceGentle {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+  60% {
+    transform: translateY(-5px);
   }
 }
 
