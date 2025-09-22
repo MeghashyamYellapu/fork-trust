@@ -1,0 +1,489 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  Shield, 
+  CheckCircle, 
+  XCircle, 
+  Eye, 
+  MessageSquare, 
+  TrendingUp, 
+  Users, 
+  Clock,
+  LogOut,
+  Star,
+  Image as ImageIcon,
+  Calendar,
+  MapPin,
+  User,
+  Package
+} from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { LanguageSelector } from '@/components/LanguageSelector';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+
+interface PendingProduct {
+  id: string;
+  farmerName: string;
+  farmLocation: string;
+  productName: string;
+  quantity: number;
+  pricePerKg: number;
+  harvestDate: string;
+  uploadDate: string;
+  images: string[];
+  description: string;
+  validatorsApproved: number;
+  totalValidators: number;
+  myVote?: 'approved' | 'rejected' | null;
+}
+
+const ValidatorDashboard = () => {
+  const { t } = useLanguage();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<'pending' | 'consensus' | 'history' | 'reputation'>('pending');
+  const [selectedProduct, setSelectedProduct] = useState<PendingProduct | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [showImageModal, setShowImageModal] = useState(false);
+
+  // Mock data
+  const [pendingProducts] = useState<PendingProduct[]>([
+    {
+      id: '1',
+      farmerName: 'Rajesh Kumar',
+      farmLocation: 'Guntur, Andhra Pradesh',
+      productName: 'Organic Rice',
+      quantity: 500,
+      pricePerKg: 45,
+      harvestDate: '2024-01-15',
+      uploadDate: '2024-01-16',
+      images: ['rice1.jpg', 'rice2.jpg', 'rice3.jpg'],
+      description: 'Premium quality Basmati rice, grown without pesticides',
+      validatorsApproved: 2,
+      totalValidators: 5,
+      myVote: null,
+    },
+    {
+      id: '2',
+      farmerName: 'Priya Devi',
+      farmLocation: 'Krishna, Andhra Pradesh',
+      productName: 'Fresh Tomatoes',
+      quantity: 200,
+      pricePerKg: 30,
+      harvestDate: '2024-01-20',
+      uploadDate: '2024-01-21',
+      images: ['tomato1.jpg', 'tomato2.jpg'],
+      description: 'Vine-ripened tomatoes, perfect for cooking',
+      validatorsApproved: 4,
+      totalValidators: 5,
+      myVote: 'approved',
+    },
+    {
+      id: '3',
+      farmerName: 'Suresh Reddy',
+      farmLocation: 'Warangal, Telangana',
+      productName: 'Cotton',
+      quantity: 100,
+      pricePerKg: 85,
+      harvestDate: '2024-01-10',
+      uploadDate: '2024-01-12',
+      images: ['cotton1.jpg'],
+      description: 'High-quality cotton suitable for textile manufacturing',
+      validatorsApproved: 1,
+      totalValidators: 5,
+      myVote: null,
+    },
+  ]);
+
+  const [validatorStats] = useState({
+    reputationScore: 4.8,
+    totalValidations: 156,
+    accuracy: 96.2,
+    rank: 12,
+  });
+
+  const handleVote = (productId: string, vote: 'approved' | 'rejected') => {
+    if (vote === 'rejected' && !rejectionReason.trim()) {
+      alert('Please provide a reason for rejection');
+      return;
+    }
+
+    console.log('Vote submitted:', { productId, vote, reason: rejectionReason });
+    
+    // Update the product's vote status
+    const product = pendingProducts.find(p => p.id === productId);
+    if (product) {
+      product.myVote = vote;
+      if (vote === 'approved') {
+        product.validatorsApproved += 1;
+      }
+    }
+
+    setSelectedProduct(null);
+    setRejectionReason('');
+  };
+
+  const getConsensusStatus = (product: PendingProduct) => {
+    const requiredVotes = Math.ceil(product.totalValidators * 0.6); // 60% consensus
+    if (product.validatorsApproved >= requiredVotes) {
+      return { status: 'approved', color: 'bg-success' };
+    } else if (product.validatorsApproved < requiredVotes && product.totalValidators - product.validatorsApproved > product.totalValidators - requiredVotes) {
+      return { status: 'rejected', color: 'bg-error' };
+    }
+    return { status: 'pending', color: 'bg-warning' };
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Shield className="w-8 h-8 text-primary" />
+            <h1 className="text-xl font-bold text-foreground">Validator Dashboard</h1>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-sm">
+              <Star className="w-4 h-4 text-warning" />
+              <span className="font-medium">{validatorStats.reputationScore}</span>
+            </div>
+            <LanguageSelector />
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/')}
+              className="gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <div className="container mx-auto px-4 py-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card className="card-elevated p-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-warning/10 rounded-lg flex items-center justify-center">
+                <Clock className="w-6 h-6 text-warning" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Pending Reviews</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {pendingProducts.filter(p => !p.myVote).length}
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="card-elevated p-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                <Shield className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Validations</p>
+                <p className="text-2xl font-bold text-foreground">{validatorStats.totalValidations}</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="card-elevated p-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-success/10 rounded-lg flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-success" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Accuracy Rate</p>
+                <p className="text-2xl font-bold text-foreground">{validatorStats.accuracy}%</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="card-elevated p-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-info/10 rounded-lg flex items-center justify-center">
+                <Users className="w-6 h-6 text-info" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Rank</p>
+                <p className="text-2xl font-bold text-foreground">#{validatorStats.rank}</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Navigation Tabs */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          {[
+            { id: 'pending', label: 'Pending Reviews', icon: Clock },
+            { id: 'consensus', label: 'Consensus Status', icon: Users },
+            { id: 'history', label: 'Validation History', icon: Shield },
+            { id: 'reputation', label: 'Reputation', icon: Star },
+          ].map((tab) => (
+            <Button
+              key={tab.id}
+              variant={activeTab === tab.id ? 'default' : 'outline'}
+              onClick={() => setActiveTab(tab.id as any)}
+              className="gap-2"
+            >
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+            </Button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'pending' && (
+          <div className="space-y-6">
+            {pendingProducts.filter(p => !p.myVote).map((product) => (
+              <Card key={product.id} className="card-elevated">
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-xl font-semibold text-foreground">{product.productName}</h3>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                        <span className="flex items-center gap-1">
+                          <User className="w-4 h-4" />
+                          {product.farmerName}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MapPin className="w-4 h-4" />
+                          {product.farmLocation}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-4 h-4" />
+                          Harvest: {new Date(product.harvestDate).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                    <Badge className="bg-warning text-white">
+                      Awaiting Review
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="md:col-span-2 space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Quantity</p>
+                          <p className="font-medium">{product.quantity} kg</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Price per Kg</p>
+                          <p className="font-medium">₹{product.pricePerKg}</p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-2">Description</p>
+                        <p className="text-foreground">{product.description}</p>
+                      </div>
+
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-2">Consensus Progress</p>
+                        <div className="flex items-center gap-4">
+                          <div className="flex-1 bg-muted rounded-full h-2">
+                            <div 
+                              className="bg-primary h-2 rounded-full" 
+                              style={{ width: `${(product.validatorsApproved / product.totalValidators) * 100}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-sm font-medium">
+                            {product.validatorsApproved}/{product.totalValidators} validators
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-2">Product Images</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {product.images.slice(0, 4).map((image, index) => (
+                            <div 
+                              key={index}
+                              className="bg-muted rounded-lg p-8 flex items-center justify-center cursor-pointer hover:bg-muted/80 transition-colors"
+                              onClick={() => setShowImageModal(true)}
+                            >
+                              <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                            </div>
+                          ))}
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="w-full mt-2"
+                          onClick={() => setShowImageModal(true)}
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          View All Images
+                        </Button>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={() => setSelectedProduct(product)}
+                          className="flex-1 bg-success hover:bg-success/90 text-white"
+                        >
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          Approve
+                        </Button>
+                        <Button 
+                          onClick={() => setSelectedProduct(product)}
+                          variant="outline"
+                          className="flex-1 border-error text-error hover:bg-error/10"
+                        >
+                          <XCircle className="w-4 h-4 mr-2" />
+                          Reject
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+
+            {pendingProducts.filter(p => !p.myVote).length === 0 && (
+              <Card className="card-elevated p-12 text-center">
+                <CheckCircle className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">All Caught Up!</h3>
+                <p className="text-muted-foreground">No pending products to review at the moment.</p>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'consensus' && (
+          <Card className="card-elevated">
+            <div className="p-6 border-b">
+              <h3 className="text-lg font-semibold">Consensus Overview</h3>
+              <p className="text-muted-foreground">Products and their validation status</p>
+            </div>
+            <div className="p-6">
+              <div className="space-y-4">
+                {pendingProducts.map((product) => {
+                  const consensus = getConsensusStatus(product);
+                  return (
+                    <div key={product.id} className="border border-border rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h4 className="font-medium text-lg">{product.productName}</h4>
+                          <p className="text-sm text-muted-foreground">{product.farmerName}</p>
+                        </div>
+                        <Badge className={`${consensus.color} text-white`}>
+                          {consensus.status}
+                        </Badge>
+                      </div>
+                      
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1 bg-muted rounded-full h-2">
+                          <div 
+                            className="bg-primary h-2 rounded-full" 
+                            style={{ width: `${(product.validatorsApproved / product.totalValidators) * 100}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          {product.validatorsApproved}/{product.totalValidators} approved
+                        </span>
+                        {product.myVote && (
+                          <Badge variant="outline" className="text-xs">
+                            Your vote: {product.myVote}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {activeTab === 'reputation' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="card-elevated p-6">
+              <h3 className="text-lg font-semibold mb-4">Your Reputation Score</h3>
+              <div className="text-center">
+                <div className="w-32 h-32 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <div className="text-3xl font-bold text-primary">{validatorStats.reputationScore}</div>
+                </div>
+                <p className="text-muted-foreground">Out of 5.0</p>
+              </div>
+            </Card>
+
+            <Card className="card-elevated p-6">
+              <h3 className="text-lg font-semibold mb-4">Performance Metrics</h3>
+              <div className="space-y-4">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total Validations:</span>
+                  <span className="font-medium">{validatorStats.totalValidations}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Accuracy Rate:</span>
+                  <span className="font-medium text-success">{validatorStats.accuracy}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Global Rank:</span>
+                  <span className="font-medium">#{validatorStats.rank}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Status:</span>
+                  <Badge className="bg-success text-white">Trusted Validator</Badge>
+                </div>
+              </div>
+            </Card>
+          </div>
+        )}
+      </div>
+
+      {/* Vote Confirmation Dialog */}
+      <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Validation</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p>Are you sure you want to validate this product?</p>
+            <div className="p-3 bg-muted rounded-lg">
+              <p className="font-medium">{selectedProduct?.productName}</p>
+              <p className="text-sm text-muted-foreground">{selectedProduct?.farmerName}</p>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-2">Reason (required for rejection):</label>
+              <Textarea
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Provide detailed reason for your decision..."
+                rows={3}
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => selectedProduct && handleVote(selectedProduct.id, 'approved')}
+                className="flex-1 bg-success hover:bg-success/90 text-white"
+              >
+                Approve
+              </Button>
+              <Button 
+                onClick={() => selectedProduct && handleVote(selectedProduct.id, 'rejected')}
+                variant="outline"
+                className="flex-1 border-error text-error hover:bg-error/10"
+              >
+                Reject
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default ValidatorDashboard;

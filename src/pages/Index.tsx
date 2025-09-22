@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Leaf, Eye, Scale, CheckCircle, Upload, Shield, Smartphone, QrCode, ArrowRight } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { LanguageSelector } from '@/components/LanguageSelector';
 import { QRScanner } from '@/components/QRScanner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -9,6 +9,7 @@ import heroImage from '@/assets/hero-farm.jpg';
 import benefitsImage from '@/assets/benefits-icons.jpg';
 
 const Index = () => {
+  const navigate = useNavigate();
   const { t } = useLanguage();
   const [showQRScanner, setShowQRScanner] = useState(false);
 
@@ -95,11 +96,19 @@ const Index = () => {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-            <Button className="btn-hero min-w-[200px]">
+            <Button 
+              onClick={() => navigate('/register')}
+              className="btn-hero min-w-[200px]"
+            >
               <ArrowRight className="w-5 h-5 mr-2" />
               {t('register')}
             </Button>
-            <Button variant="outline" size="lg" className="min-w-[200px] bg-background/80 backdrop-blur-sm">
+            <Button 
+              onClick={() => navigate('/login')}
+              variant="outline" 
+              size="lg" 
+              className="min-w-[200px] bg-background/80 backdrop-blur-sm"
+            >
               {t('login')}
             </Button>
           </div>
