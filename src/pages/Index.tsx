@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Leaf, Eye, Scale, CheckCircle, Upload, Shield, Smartphone, QrCode, ArrowRight } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { LanguageSelector } from '@/components/LanguageSelector';
 import { QRScanner } from '@/components/QRScanner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';

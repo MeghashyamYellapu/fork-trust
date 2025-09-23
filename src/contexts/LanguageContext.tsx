@@ -151,6 +151,88 @@ const translations: Translations = {
     en: "Close",
     te: "మూసివేయండి",
     hi: "बंद करें"
+  },
+
+  // Dashboard translations
+  dashboard: {
+    en: "Dashboard",
+    te: "డాష్‌బోర్డ్",
+    hi: "डैशबोर्ड"
+  },
+  distributorDashboard: {
+    en: "Distributor Dashboard",
+    te: "పంపిణీదారు డాష్‌బోర్డ్",
+    hi: "वितरक डैशबोर्ड"
+  },
+  availableProducts: {
+    en: "Available Products",
+    te: "అందుబాటులో ఉన్న ఉత్పత్తులు",
+    hi: "उपलब्ध उत्पाद"
+  },
+  orderManagement: {
+    en: "Order Management",
+    te: "ఆర్డర్ నిర్వహణ",
+    hi: "ऑर्डर प्रबंधन"
+  },
+  totalOrders: {
+    en: "Total Orders",
+    te: "మొత్తం ఆర్డర్లు",
+    hi: "कुल ऑर्डर"
+  },
+  activeOrders: {
+    en: "Active Orders",
+    te: "క్రియాశీల ఆర్డర్లు",
+    hi: "सक्रिय ऑर्डर"
+  },
+  completed: {
+    en: "Completed",
+    te: "పూర్తయింది",
+    hi: "पूर्ण"
+  },
+  blockchainVerified: {
+    en: "Blockchain Verified",
+    te: "బ్లాక్‌చెయిన్ ధృవీకరించబడింది",
+    hi: "ब्लॉकचेन सत्यापित"
+  },
+  farmerInfo: {
+    en: "Farmer Information",
+    te: "రైతు సమాచారం",
+    hi: "किसान की जानकारी"
+  },
+  supplyChainJourney: {
+    en: "Supply Chain Journey",
+    te: "సప్లై చెయిన్ ప్రయాణం",
+    hi: "आपूर्ति श्रृंखला यात्रा"
+  },
+  qualityVerification: {
+    en: "Quality Verification Report",
+    te: "నాణ్యత ధృవీకరణ నివేదిక",
+    hi: "गुणवत्ता सत्यापन रिपोर्ट"
+  },
+  sustainabilityReport: {
+    en: "Sustainability Report",
+    te: "స్థిరత్వ నివేదిక",
+    hi: "स्थिरता रिपोर्ट"
+  },
+  rateProduct: {
+    en: "Rate This Product",
+    te: "ఈ ఉత్పత్తిని రేట్ చేయండి",
+    hi: "इस उत्पाद को रेट करें"
+  },
+  backToHome: {
+    en: "Back to Home",
+    te: "హోమ్‌కు తిరిగి",
+    hi: "होम पर वापस"
+  },
+  orderNow: {
+    en: "Order Now",
+    te: "ఇప్పుడే ఆర్డర్ చేయండి",
+    hi: "अभी ऑर्डर करें"
+  },
+  submitFeedback: {
+    en: "Submit Feedback",
+    te: "అభిప్రాయాన్ని సమర్పించండి",
+    hi: "फीडबैक सबमिट करें"
   }
 };
 
