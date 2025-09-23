@@ -113,7 +113,7 @@ const Login = () => {
             className="gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Home
+            {t('backToHome')}
           </Button>
           <LanguageSelector />
         </div>
@@ -123,19 +123,19 @@ const Login = () => {
         <Card className="card-elevated">
           <div className="p-8">
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-foreground mb-2">Welcome Back</h1>
-              <p className="text-muted-foreground">Sign in to your account</p>
+              <h1 className="text-3xl font-bold text-foreground mb-2">{t('welcomeBack')}</h1>
+              <p className="text-muted-foreground">{t('signInToAccount')}</p>
             </div>
 
             <Tabs value={loginMethod} onValueChange={(value) => setLoginMethod(value as 'password' | 'otp')}>
               <TabsList className="grid w-full grid-cols-2 mb-6">
                 <TabsTrigger value="password" className="text-sm">
                   <Lock className="w-4 h-4 mr-2" />
-                  Password
+                  {t('password')}
                 </TabsTrigger>
                 <TabsTrigger value="otp" className="text-sm">
                   <Smartphone className="w-4 h-4 mr-2" />
-                  OTP
+                  {t('otp')}
                 </TabsTrigger>
               </TabsList>
 
@@ -143,21 +143,21 @@ const Login = () => {
                 <form onSubmit={handlePasswordLogin} className="space-y-6">
                   <div>
                     <Label htmlFor="phoneOrEmail" className="text-large">
-                      Phone Number or Email / ఫోన్ లేదా ఈమెయిల్ / फोन या ईमेल
+                      {t('phoneOrEmailLabel')}
                     </Label>
                     <Input
                       id="phoneOrEmail"
                       value={formData.phoneOrEmail}
                       onChange={(e) => handleInputChange('phoneOrEmail', e.target.value)}
                       className="mt-2 text-lg"
-                      placeholder="Enter phone number or email"
+                      placeholder={t('enterPhoneOrEmail')}
                     />
                     {errors.phoneOrEmail && <p className="text-error text-sm mt-1">{errors.phoneOrEmail}</p>}
                   </div>
 
                   <div>
                     <Label htmlFor="password" className="text-large">
-                      Password / పాస్‌వర్డ్ / पासवर्ड
+                      {t('password')}
                     </Label>
                     <div className="relative mt-2">
                       <Input
@@ -166,7 +166,7 @@ const Login = () => {
                         value={formData.password}
                         onChange={(e) => handleInputChange('password', e.target.value)}
                         className="text-lg pr-12"
-                        placeholder="Enter your password"
+                        placeholder={t('enterPassword')}
                       />
                       <Button
                         type="button"
@@ -191,7 +191,7 @@ const Login = () => {
                         console.log('Forgot password clicked');
                       }}
                     >
-                      Forgot Password?
+                      {t('forgotPassword')}
                     </Button>
                   </div>
 
@@ -201,7 +201,7 @@ const Login = () => {
                     size="lg"
                     disabled={isLoading}
                   >
-                    {isLoading ? 'Signing In...' : 'Sign In'}
+                    {isLoading ? t('verifying') : t('signIn')}
                   </Button>
                 </form>
               </TabsContent>
@@ -210,7 +210,7 @@ const Login = () => {
                 <form onSubmit={handleOTPLogin} className="space-y-6">
                   <div>
                     <Label htmlFor="phoneNumberOTP" className="text-large">
-                      Phone Number / ఫోన్ నంబర్ / फोन नंबर
+                      {t('phoneOrEmailLabel')}
                     </Label>
                     <div className="flex gap-2 mt-2">
                       <Input
@@ -230,7 +230,7 @@ const Login = () => {
                           variant="outline"
                           className="whitespace-nowrap"
                         >
-                          {isLoading ? 'Sending...' : 'Send OTP'}
+                          {isLoading ? t('sending') : t('sendOTP')}
                         </Button>
                       )}
                     </div>
@@ -240,7 +240,7 @@ const Login = () => {
                   {otpSent && (
                     <div>
                       <Label htmlFor="otpInput" className="text-large">
-                        Enter OTP / OTP నమోదు చేయండి / OTP दर्ज करें
+                        {t('enterOtp')}
                       </Label>
                       <div className="flex gap-2 mt-2">
                         <Input
@@ -260,7 +260,7 @@ const Login = () => {
                           variant="outline"
                           className="whitespace-nowrap"
                         >
-                          Resend
+                          {t('resend')}
                         </Button>
                       </div>
                       {errors.otp && <p className="text-error text-sm mt-1">{errors.otp}</p>}
@@ -276,7 +276,7 @@ const Login = () => {
                     size="lg"
                     disabled={isLoading}
                   >
-                    {isLoading ? 'Verifying...' : otpSent ? 'Verify & Sign In' : 'Send OTP'}
+                    {isLoading ? t('verifying') : otpSent ? t('verifyAndSignIn') : t('sendOTP')}
                   </Button>
                 </form>
               </TabsContent>
@@ -284,13 +284,13 @@ const Login = () => {
 
             <div className="text-center mt-6">
               <p className="text-muted-foreground">
-                Don't have an account?{' '}
+                {"Don't have an account?"}{' '}
                 <Button 
                   variant="link" 
                   onClick={() => navigate('/register')}
                   className="p-0 h-auto text-primary"
                 >
-                  Register here
+                  {t('register')}
                 </Button>
               </p>
             </div>

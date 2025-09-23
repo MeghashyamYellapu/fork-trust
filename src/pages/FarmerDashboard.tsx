@@ -132,10 +132,10 @@ const FarmerDashboard = () => {
 
   const getStatusText = (status: Product['status']) => {
     switch (status) {
-      case 'approved': return 'Approved';
-      case 'pending': return 'Pending Review';
-      case 'rejected': return 'Rejected';
-      default: return 'Unknown';
+      case 'approved': return t('statusApproved');
+      case 'pending': return t('statusPendingReview');
+      case 'rejected': return t('statusRejected');
+      default: return t('statusUnknown');
     }
   };
 
@@ -149,7 +149,7 @@ const FarmerDashboard = () => {
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold text-foreground">Farmer Dashboard</h1>
+            <h1 className="text-xl font-bold text-foreground">{t('farmerDashboard')}</h1>
           </div>
           <div className="flex items-center gap-4">
             <LanguageSelector />
@@ -159,7 +159,7 @@ const FarmerDashboard = () => {
               className="gap-2"
             >
               <LogOut className="w-4 h-4" />
-              Logout
+              {t('logout')}
             </Button>
           </div>
         </div>
@@ -174,7 +174,7 @@ const FarmerDashboard = () => {
                 <DollarSign className="w-6 h-6 text-success" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Revenue</p>
+                <p className="text-sm text-muted-foreground">{t('totalRevenue')}</p>
                 <p className="text-2xl font-bold text-foreground">₹{totalRevenue.toLocaleString()}</p>
               </div>
             </div>
@@ -186,7 +186,7 @@ const FarmerDashboard = () => {
                 <Clock className="w-6 h-6 text-warning" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Pending Approval</p>
+                <p className="text-sm text-muted-foreground">{t('pendingApproval')}</p>
                 <p className="text-2xl font-bold text-foreground">{pendingProducts}</p>
               </div>
             </div>
@@ -198,7 +198,7 @@ const FarmerDashboard = () => {
                 <CheckCircle className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Approved Products</p>
+                <p className="text-sm text-muted-foreground">{t('approvedProducts')}</p>
                 <p className="text-2xl font-bold text-foreground">{approvedProducts}</p>
               </div>
             </div>
@@ -210,7 +210,7 @@ const FarmerDashboard = () => {
                 <Package className="w-6 h-6 text-info" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Products</p>
+                <p className="text-sm text-muted-foreground">{t('totalProducts')}</p>
                 <p className="text-2xl font-bold text-foreground">{products.length}</p>
               </div>
             </div>
@@ -220,11 +220,11 @@ const FarmerDashboard = () => {
         {/* Navigation Tabs */}
         <div className="flex flex-wrap gap-2 mb-6">
           {[
-            { id: 'overview', label: 'Overview', icon: BarChart3 },
-            { id: 'add-product', label: 'Add Product', icon: Plus },
-            { id: 'pending', label: 'Pending Approvals', icon: Clock },
-            { id: 'pricing', label: 'Market Prices', icon: TrendingUp },
-            { id: 'history', label: 'History', icon: History },
+            { id: 'overview', label: t('overview'), icon: BarChart3 },
+            { id: 'add-product', label: t('addProduct'), icon: Plus },
+            { id: 'pending', label: t('pendingApprovals'), icon: Clock },
+            { id: 'pricing', label: t('marketPrices'), icon: TrendingUp },
+            { id: 'history', label: t('history'), icon: History },
           ].map((tab) => (
             <Button
               key={tab.id}
@@ -242,7 +242,7 @@ const FarmerDashboard = () => {
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card className="card-elevated p-6">
-              <h3 className="text-lg font-semibold mb-4">Recent Products</h3>
+              <h3 className="text-lg font-semibold mb-4">{t('recentProducts')}</h3>
               <div className="space-y-3">
                 {products.slice(0, 3).map((product) => (
                   <div key={product.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
@@ -259,14 +259,14 @@ const FarmerDashboard = () => {
             </Card>
 
             <Card className="card-elevated p-6">
-              <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
+              <h3 className="text-lg font-semibold mb-4">{t('quickActions')}</h3>
               <div className="space-y-3">
                 <Button 
                   onClick={() => setActiveTab('add-product')}
                   className="w-full btn-primary justify-start"
                 >
                   <Plus className="w-5 h-5 mr-2" />
-                  Add New Product
+                  {t('addNewProduct')}
                 </Button>
                 <Button 
                   onClick={() => setActiveTab('pending')}
@@ -274,7 +274,7 @@ const FarmerDashboard = () => {
                   className="w-full justify-start"
                 >
                   <Clock className="w-5 h-5 mr-2" />
-                  View Pending Approvals
+                  {t('viewPendingApprovals')}
                 </Button>
                 <Button 
                   onClick={() => setActiveTab('pricing')}
@@ -282,7 +282,7 @@ const FarmerDashboard = () => {
                   className="w-full justify-start"
                 >
                   <TrendingUp className="w-5 h-5 mr-2" />
-                  Check Market Prices
+                  {t('checkMarketPrices')}
                 </Button>
               </div>
             </Card>
@@ -291,56 +291,67 @@ const FarmerDashboard = () => {
 
         {activeTab === 'add-product' && (
           <Card className="card-elevated p-6 max-w-2xl">
-            <h3 className="text-lg font-semibold mb-6">Add New Product</h3>
+            <h3 className="text-lg font-semibold mb-6">{t('addNewProductTitle')}</h3>
             <form onSubmit={handleSubmitProduct} className="space-y-6">
               <div>
-                <Label htmlFor="productName" className="text-large">Product Name</Label>
+                <Label className="text-large">{t('productImages')}</Label>
+                <div className="mt-2 border-2 border-dashed border-border rounded-lg p-8 text-center">
+                  <Camera className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground mb-4">{t('uploadProductImages')}</p>
+                  <Button type="button" variant="outline">
+                    <Upload className="w-4 h-4 mr-2" />
+                    {t('chooseImages')}
+                  </Button>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="productName" className="text-large">{t('productName')}</Label>
                 <Select value={productForm.name} onValueChange={(value) => handleInputChange('name', value)}>
                   <SelectTrigger className="mt-2 text-lg">
-                    <SelectValue placeholder="Select product" />
+                    <SelectValue placeholder={t('selectProduct')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="rice">Rice / వరి / चावल</SelectItem>
-                    <SelectItem value="wheat">Wheat / గోధుమ / गेहूं</SelectItem>
-                    <SelectItem value="tomatoes">Tomatoes / టమాటో / टमाटर</SelectItem>
-                    <SelectItem value="cotton">Cotton / పత్తి / कपास</SelectItem>
-                    <SelectItem value="sugarcane">Sugarcane / చెరకు / गन्ना</SelectItem>
-                    <SelectItem value="vegetables">Vegetables / కూరగాయలు / सब्जियां</SelectItem>
+                    <SelectItem value="rice">Rice</SelectItem>
+                    <SelectItem value="wheat">Wheat</SelectItem>
+                    <SelectItem value="tomatoes">Tomatoes</SelectItem>
+                    <SelectItem value="cotton">Cotton</SelectItem>
+                    <SelectItem value="sugarcane">Sugarcane</SelectItem>
+                    <SelectItem value="vegetables">Vegetables</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="quantity" className="text-large">Quantity (kg)</Label>
+                  <Label htmlFor="quantity" className="text-large">{t('quantityKg')}</Label>
                   <Input
                     id="quantity"
                     type="number"
                     value={productForm.quantity}
                     onChange={(e) => handleInputChange('quantity', e.target.value)}
                     className="mt-2 text-lg"
-                    placeholder="Enter quantity in kg"
+                    placeholder={t('enterQuantityKg')}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="pricePerKg" className="text-large">Price per Kg (₹)</Label>
+                  <Label htmlFor="pricePerKg" className="text-large">{t('pricePerKgCurrency')}</Label>
                   <Input
                     id="pricePerKg"
                     type="number"
                     value={productForm.pricePerKg}
                     onChange={(e) => handleInputChange('pricePerKg', e.target.value)}
                     className="mt-2 text-lg"
-                    placeholder="Enter price per kg"
+                    placeholder={t('enterPricePerKg')}
                   />
                   <p className="text-sm text-muted-foreground mt-1">
-                    Recommended: ₹45 based on market analysis
+                    {t('recommendedLabel')} ₹45 {t('basedOnMarketAnalysis')}
                   </p>
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="harvestDate" className="text-large">Harvest Date</Label>
+                <Label htmlFor="harvestDate" className="text-large">{t('harvestDateLabel')}</Label>
                 <Input
                   id="harvestDate"
                   type="date"
@@ -351,31 +362,18 @@ const FarmerDashboard = () => {
               </div>
 
               <div>
-                <Label htmlFor="description" className="text-large">Description (Optional)</Label>
+                <Label htmlFor="description" className="text-large">{t('descriptionOptional')}</Label>
                 <Textarea
                   id="description"
                   value={productForm.description}
                   onChange={(e) => handleInputChange('description', e.target.value)}
                   className="mt-2 text-lg"
-                  placeholder="Add any additional details about your product"
+                  placeholder={t('addlDetailsPlaceholder')}
                   rows={3}
                 />
               </div>
-
-              <div>
-                <Label className="text-large">Product Images</Label>
-                <div className="mt-2 border-2 border-dashed border-border rounded-lg p-8 text-center">
-                  <Camera className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground mb-4">Upload product images</p>
-                  <Button type="button" variant="outline">
-                    <Upload className="w-4 h-4 mr-2" />
-                    Choose Images
-                  </Button>
-                </div>
-              </div>
-
               <Button type="submit" className="w-full btn-primary" size="lg">
-                Submit for Validation
+                {t('submitForValidation')}
               </Button>
             </form>
           </Card>
@@ -384,8 +382,8 @@ const FarmerDashboard = () => {
         {activeTab === 'pending' && (
           <Card className="card-elevated">
             <div className="p-6 border-b">
-              <h3 className="text-lg font-semibold">Pending Approvals</h3>
-              <p className="text-muted-foreground">Products awaiting validator approval</p>
+              <h3 className="text-lg font-semibold">{t('pendingApprovals')}</h3>
+              <p className="text-muted-foreground">{t('productsAwaitingApproval')}</p>
             </div>
             <div className="p-6">
               <div className="space-y-4">
@@ -412,14 +410,14 @@ const FarmerDashboard = () => {
                           ></div>
                         </div>
                         <span className="text-sm text-muted-foreground">
-                          {product.validatorsApproved}/{product.totalValidators} validators
+                          {product.validatorsApproved}/{product.totalValidators} {t('validatorsLabel')}
                         </span>
                       </div>
                     </div>
 
                     {product.status === 'rejected' && product.rejectionReason && (
                       <div className="bg-error/10 border border-error/20 rounded-lg p-3">
-                        <p className="text-sm text-error font-medium mb-1">Rejection Reason:</p>
+                        <p className="text-sm text-error font-medium mb-1">{t('rejectionReasonLabel')}</p>
                         <p className="text-sm text-error">{product.rejectionReason}</p>
                       </div>
                     )}
@@ -433,8 +431,8 @@ const FarmerDashboard = () => {
         {activeTab === 'pricing' && (
           <Card className="card-elevated">
             <div className="p-6 border-b">
-              <h3 className="text-lg font-semibold">Market Price Dashboard</h3>
-              <p className="text-muted-foreground">AI-powered fair pricing recommendations</p>
+              <h3 className="text-lg font-semibold">{t('marketPriceDashboard')}</h3>
+              <p className="text-muted-foreground">{t('fairPricingRecommendations')}</p>
             </div>
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -453,15 +451,15 @@ const FarmerDashboard = () => {
                     
                     <div className="space-y-2">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Market Price:</span>
+                        <span className="text-muted-foreground">{t('marketPrice')}</span>
                         <span className="font-medium">₹{price.currentPrice}/kg</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Recommended:</span>
-                        <span className="font-semibold text-primary">₹{price.recommendedPrice}/kg</span>
+                        <span className="text-muted-foreground">{t('recommended')}</span>
+                        <span className="text-primary font-semibold">₹{price.recommendedPrice}/kg</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Profit Margin:</span>
+                        <span className="text-muted-foreground">{t('profitMargin')}</span>
                         <span className="font-medium text-success">
                           +₹{price.recommendedPrice - price.currentPrice}/kg
                         </span>
@@ -477,8 +475,8 @@ const FarmerDashboard = () => {
         {activeTab === 'history' && (
           <Card className="card-elevated">
             <div className="p-6 border-b">
-              <h3 className="text-lg font-semibold">Product History</h3>
-              <p className="text-muted-foreground">Your past uploads and sales</p>
+              <h3 className="text-lg font-semibold">{t('productHistory')}</h3>
+              <p className="text-muted-foreground">{t('pastUploadsAndSales')}</p>
             </div>
             <div className="p-6">
               <div className="space-y-4">

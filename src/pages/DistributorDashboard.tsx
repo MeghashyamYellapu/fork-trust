@@ -98,7 +98,7 @@ const DistributorDashboard = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-foreground">Distributor Dashboard</h1>
+              <h1 className="text-2xl font-bold text-foreground">{t('distributorDashboard')}</h1>
               <Badge variant="secondary" className="text-lg px-4 py-2">
                 <Star className="w-4 h-4 mr-1" />
                 4.7 Rating
@@ -116,7 +116,7 @@ const DistributorDashboard = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-primary-foreground/80">Total Orders</p>
+                  <p className="text-primary-foreground/80">{t('totalOrders')}</p>
                   <p className="text-3xl font-bold">156</p>
                 </div>
                 <ShoppingCart className="w-8 h-8" />
@@ -138,7 +138,7 @@ const DistributorDashboard = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-accent-foreground/80">Active Orders</p>
+                  <p className="text-accent-foreground/80">{t('activeOrders')}</p>
                   <p className="text-3xl font-bold">23</p>
                 </div>
                 <Truck className="w-8 h-8" />
@@ -149,7 +149,7 @@ const DistributorDashboard = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-success-foreground/80">Completed</p>
+                  <p className="text-success-foreground/80">{t('completed')}</p>
                   <p className="text-3xl font-bold">133</p>
                 </div>
                 <CheckCircle className="w-8 h-8" />
@@ -162,7 +162,7 @@ const DistributorDashboard = () => {
         <Card>
           <CardHeader>
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
-              <CardTitle className="text-2xl">Available Products</CardTitle>
+              <CardTitle className="text-2xl">{t('availableProducts')}</CardTitle>
               
               {/* Filters */}
               <div className="flex flex-wrap items-center gap-4">
@@ -248,7 +248,7 @@ const DistributorDashboard = () => {
         {/* Order Management */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl">Order Management</CardTitle>
+            <CardTitle className="text-2xl">{t('orderManagement')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">

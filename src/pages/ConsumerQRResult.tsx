@@ -104,12 +104,12 @@ const ConsumerQRResult = () => {
               <Link to="/">
                 <Button variant="ghost" size="sm">
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Home
+                  {t('backToHome')}
                 </Button>
               </Link>
               <div className="flex items-center space-x-2">
                 <Shield className="w-6 h-6 text-success" />
-                <span className="text-xl font-bold text-foreground">Blockchain Verified</span>
+                <span className="text-xl font-bold text-foreground">{t('blockchainVerified')}</span>
               </div>
             </div>
             <LanguageSelector />
@@ -130,7 +130,7 @@ const ConsumerQRResult = () => {
                   <h1 className="text-3xl font-bold text-foreground mb-2">{productData.name}</h1>
                   <Badge className="bg-success text-success-foreground text-lg px-4 py-2">
                     <CheckCircle className="w-5 h-5 mr-2" />
-                    Blockchain Verified
+                    {t('blockchainVerified')}
                   </Badge>
                 </div>
                 
@@ -158,7 +158,7 @@ const ConsumerQRResult = () => {
           <CardHeader>
             <CardTitle className="text-2xl flex items-center">
               <MapPin className="w-6 h-6 mr-3 text-primary" />
-              Farmer Information
+              {t('farmerInfo')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -183,7 +183,7 @@ const ConsumerQRResult = () => {
           <CardHeader>
             <CardTitle className="text-2xl flex items-center">
               <Truck className="w-6 h-6 mr-3 text-primary" />
-              Supply Chain Journey
+              {t('supplyChainJourney')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -217,7 +217,7 @@ const ConsumerQRResult = () => {
           <CardHeader>
             <CardTitle className="text-2xl flex items-center">
               <Shield className="w-6 h-6 mr-3 text-primary" />
-              Quality Verification Report
+              {t('qualityVerification')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -253,7 +253,7 @@ const ConsumerQRResult = () => {
           <CardHeader>
             <CardTitle className="text-2xl flex items-center">
               <Leaf className="w-6 h-6 mr-3 text-primary" />
-              Sustainability Report
+              {t('sustainabilityReport')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -285,7 +285,7 @@ const ConsumerQRResult = () => {
           <CardHeader>
             <CardTitle className="text-2xl flex items-center">
               <MessageSquare className="w-6 h-6 mr-3 text-primary" />
-              Rate This Product
+              {t('rateProduct')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -323,7 +323,7 @@ const ConsumerQRResult = () => {
                 className="w-full md:w-auto"
               >
                 <ThumbsUp className="w-4 h-4 mr-2" />
-                Submit Feedback
+                {t('submitFeedback')}
               </Button>
             </div>
           </CardContent>

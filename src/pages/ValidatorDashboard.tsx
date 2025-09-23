@@ -143,7 +143,7 @@ const ValidatorDashboard = () => {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Shield className="w-8 h-8 text-primary" />
-            <h1 className="text-xl font-bold text-foreground">Validator Dashboard</h1>
+            <h1 className="text-xl font-bold text-foreground">{t('validatorDashboard')}</h1>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm">
@@ -157,7 +157,7 @@ const ValidatorDashboard = () => {
               className="gap-2"
             >
               <LogOut className="w-4 h-4" />
-              Logout
+              {t('logout')}
             </Button>
           </div>
         </div>
@@ -172,7 +172,7 @@ const ValidatorDashboard = () => {
                 <Clock className="w-6 h-6 text-warning" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Pending Reviews</p>
+                <p className="text-sm text-muted-foreground">{t('pendingReviews')}</p>
                 <p className="text-2xl font-bold text-foreground">
                   {pendingProducts.filter(p => !p.myVote).length}
                 </p>
@@ -186,7 +186,7 @@ const ValidatorDashboard = () => {
                 <Shield className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Validations</p>
+                <p className="text-sm text-muted-foreground">{t('totalValidations')}</p>
                 <p className="text-2xl font-bold text-foreground">{validatorStats.totalValidations}</p>
               </div>
             </div>
@@ -198,7 +198,7 @@ const ValidatorDashboard = () => {
                 <TrendingUp className="w-6 h-6 text-success" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Accuracy Rate</p>
+                <p className="text-sm text-muted-foreground">{t('accuracyRate')}</p>
                 <p className="text-2xl font-bold text-foreground">{validatorStats.accuracy}%</p>
               </div>
             </div>
@@ -210,7 +210,7 @@ const ValidatorDashboard = () => {
                 <Users className="w-6 h-6 text-info" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Rank</p>
+                <p className="text-sm text-muted-foreground">{t('rank')}</p>
                 <p className="text-2xl font-bold text-foreground">#{validatorStats.rank}</p>
               </div>
             </div>
@@ -220,10 +220,10 @@ const ValidatorDashboard = () => {
         {/* Navigation Tabs */}
         <div className="flex flex-wrap gap-2 mb-6">
           {[
-            { id: 'pending', label: 'Pending Reviews', icon: Clock },
-            { id: 'consensus', label: 'Consensus Status', icon: Users },
-            { id: 'history', label: 'Validation History', icon: Shield },
-            { id: 'reputation', label: 'Reputation', icon: Star },
+            { id: 'pending', label: t('pendingReviews'), icon: Clock },
+            { id: 'consensus', label: t('consensusStatus'), icon: Users },
+            { id: 'history', label: t('validationHistory'), icon: Shield },
+            { id: 'reputation', label: t('reputation'), icon: Star },
           ].map((tab) => (
             <Button
               key={tab.id}
@@ -262,7 +262,7 @@ const ValidatorDashboard = () => {
                       </div>
                     </div>
                     <Badge className="bg-warning text-white">
-                      Awaiting Review
+                      {t('awaitingReview')}
                     </Badge>
                   </div>
 
@@ -270,22 +270,22 @@ const ValidatorDashboard = () => {
                     <div className="md:col-span-2 space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="text-sm text-muted-foreground">Quantity</p>
+                          <p className="text-sm text-muted-foreground">{t('quantity')}</p>
                           <p className="font-medium">{product.quantity} kg</p>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Price per Kg</p>
+                          <p className="text-sm text-muted-foreground">{t('pricePerKg')}</p>
                           <p className="font-medium">₹{product.pricePerKg}</p>
                         </div>
                       </div>
 
                       <div>
-                        <p className="text-sm text-muted-foreground mb-2">Description</p>
+                        <p className="text-sm text-muted-foreground mb-2">{t('description')}</p>
                         <p className="text-foreground">{product.description}</p>
                       </div>
 
                       <div>
-                        <p className="text-sm text-muted-foreground mb-2">Consensus Progress</p>
+                        <p className="text-sm text-muted-foreground mb-2">{t('consensusProgress')}</p>
                         <div className="flex items-center gap-4">
                           <div className="flex-1 bg-muted rounded-full h-2">
                             <div 
@@ -294,7 +294,7 @@ const ValidatorDashboard = () => {
                             ></div>
                           </div>
                           <span className="text-sm font-medium">
-                            {product.validatorsApproved}/{product.totalValidators} validators
+                            {product.validatorsApproved}/{product.totalValidators} {t('validators')}
                           </span>
                         </div>
                       </div>
@@ -302,7 +302,7 @@ const ValidatorDashboard = () => {
 
                     <div className="space-y-4">
                       <div>
-                        <p className="text-sm text-muted-foreground mb-2">Product Images</p>
+                        <p className="text-sm text-muted-foreground mb-2">{t('productImages')}</p>
                         <div className="grid grid-cols-2 gap-2">
                           {product.images.slice(0, 4).map((image, index) => (
                             <div 
@@ -321,7 +321,7 @@ const ValidatorDashboard = () => {
                           onClick={() => setShowImageModal(true)}
                         >
                           <Eye className="w-4 h-4 mr-2" />
-                          View All Images
+                          {t('viewAllImages')}
                         </Button>
                       </div>
 
@@ -331,7 +331,7 @@ const ValidatorDashboard = () => {
                           className="flex-1 bg-success hover:bg-success/90 text-white"
                         >
                           <CheckCircle className="w-4 h-4 mr-2" />
-                          Approve
+                          {t('approve')}
                         </Button>
                         <Button 
                           onClick={() => setSelectedProduct(product)}
@@ -339,7 +339,7 @@ const ValidatorDashboard = () => {
                           className="flex-1 border-error text-error hover:bg-error/10"
                         >
                           <XCircle className="w-4 h-4 mr-2" />
-                          Reject
+                          {t('reject')}
                         </Button>
                       </div>
                     </div>
@@ -351,8 +351,8 @@ const ValidatorDashboard = () => {
             {pendingProducts.filter(p => !p.myVote).length === 0 && (
               <Card className="card-elevated p-12 text-center">
                 <CheckCircle className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-foreground mb-2">All Caught Up!</h3>
-                <p className="text-muted-foreground">No pending products to review at the moment.</p>
+                <h3 className="text-lg font-semibold text-foreground mb-2">{t('allCaughtUp')}</h3>
+                <p className="text-muted-foreground">{t('noPendingProducts')}</p>
               </Card>
             )}
           </div>
@@ -361,8 +361,8 @@ const ValidatorDashboard = () => {
         {activeTab === 'consensus' && (
           <Card className="card-elevated">
             <div className="p-6 border-b">
-              <h3 className="text-lg font-semibold">Consensus Overview</h3>
-              <p className="text-muted-foreground">Products and their validation status</p>
+              <h3 className="text-lg font-semibold">{t('consensusOverview')}</h3>
+              <p className="text-muted-foreground">{t('productsAndStatus')}</p>
             </div>
             <div className="p-6">
               <div className="space-y-4">
@@ -392,7 +392,7 @@ const ValidatorDashboard = () => {
                         </span>
                         {product.myVote && (
                           <Badge variant="outline" className="text-xs">
-                            Your vote: {product.myVote}
+                            {t('yourVote')} {product.myVote}
                           </Badge>
                         )}
                       </div>
@@ -445,21 +445,21 @@ const ValidatorDashboard = () => {
       <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Confirm Validation</DialogTitle>
+            <DialogTitle>{t('confirmValidation')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p>Are you sure you want to validate this product?</p>
+            <p>{t('areYouSureValidate')}</p>
             <div className="p-3 bg-muted rounded-lg">
               <p className="font-medium">{selectedProduct?.productName}</p>
               <p className="text-sm text-muted-foreground">{selectedProduct?.farmerName}</p>
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-2">Reason (required for rejection):</label>
+              <label className="block text-sm font-medium mb-2">{t('reasonForRejection')}</label>
               <Textarea
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="Provide detailed reason for your decision..."
+                placeholder={t('provideReasonPlaceholder')}
                 rows={3}
               />
             </div>
@@ -469,14 +469,14 @@ const ValidatorDashboard = () => {
                 onClick={() => selectedProduct && handleVote(selectedProduct.id, 'approved')}
                 className="flex-1 bg-success hover:bg-success/90 text-white"
               >
-                Approve
+                {t('approve')}
               </Button>
               <Button 
                 onClick={() => selectedProduct && handleVote(selectedProduct.id, 'rejected')}
                 variant="outline"
                 className="flex-1 border-error text-error hover:bg-error/10"
               >
-                Reject
+                {t('reject')}
               </Button>
             </div>
           </div>
