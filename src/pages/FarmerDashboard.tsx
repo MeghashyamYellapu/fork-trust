@@ -294,6 +294,17 @@ const FarmerDashboard = () => {
             <h3 className="text-lg font-semibold mb-6">Add New Product</h3>
             <form onSubmit={handleSubmitProduct} className="space-y-6">
               <div>
+                <Label className="text-large">Product Images</Label>
+                <div className="mt-2 border-2 border-dashed border-border rounded-lg p-8 text-center">
+                  <Camera className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground mb-4">Upload product images</p>
+                  <Button type="button" variant="outline">
+                    <Upload className="w-4 h-4 mr-2" />
+                    Choose Images
+                  </Button>
+                </div>
+              </div>
+              <div>
                 <Label htmlFor="productName" className="text-large">Product Name</Label>
                 <Select value={productForm.name} onValueChange={(value) => handleInputChange('name', value)}>
                   <SelectTrigger className="mt-2 text-lg">
@@ -361,19 +372,6 @@ const FarmerDashboard = () => {
                   rows={3}
                 />
               </div>
-
-              <div>
-                <Label className="text-large">Product Images</Label>
-                <div className="mt-2 border-2 border-dashed border-border rounded-lg p-8 text-center">
-                  <Camera className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground mb-4">Upload product images</p>
-                  <Button type="button" variant="outline">
-                    <Upload className="w-4 h-4 mr-2" />
-                    Choose Images
-                  </Button>
-                </div>
-              </div>
-
               <Button type="submit" className="w-full btn-primary" size="lg">
                 Submit for Validation
               </Button>
