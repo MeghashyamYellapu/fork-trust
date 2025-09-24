@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,17 +18,18 @@ import {
   MessageSquare
 } from "lucide-react";
 
+import { apiFetch } from '@/lib/api';
+
 const ConsumerQRResult = () => {
   const { t } = useLanguage();
   const [searchParams] = useSearchParams();
   const [rating, setRating] = useState(0);
   const [feedback, setFeedback] = useState("");
   
-  // Get product ID from URL params (in real app, this would fetch from blockchain)
-  const productId = searchParams.get('id') || 'demo-product';
+  // Prefer QR code param "code", fallback to mock id
+  const code = searchParams.get('code') || searchParams.get('id') || 'demo-product';
 
-  // Mock product data (in real app, this would come from blockchain)
-  const productData = {
+  const [productData, setProductData] = useState<any>({
     id: productId,
     name: "Organic Tomatoes",
     image: "/api/placeholder/300/200",
@@ -84,7 +85,26 @@ const ConsumerQRResult = () => {
       average: 4.7,
       count: 156
     }
-  };
+  });
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const p = await apiFetch<any>(`/qr/${encodeURIComponent(code)}`);
+        setProductData((prev: any) => ({
+          ...prev,
+          id: p._id,
+          name: p.name,
+          farmer: { ...prev.farmer, name: p.farmer?.name || prev.farmer.name },
+          harvest: { ...prev.harvest, date: p.harvestDate },
+          quality: { ...prev.quality, approved: p.validatorsApproved, validators: p.totalValidators },
+        }));
+      } catch (e) {
+        // keep mock
+        console.error(e);
+      }
+    })();
+  }, [code]);
 
   const handleRatingSubmit = () => {
     // In real app, submit to blockchain

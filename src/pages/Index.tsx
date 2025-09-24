@@ -16,9 +16,11 @@ const Index = () => {
 
   const handleQRScan = (result: string) => {
     console.log('QR Code scanned:', result);
-    // Navigate to product details page
+    // Navigate to product details page with mock data
     setShowQRScanner(false);
-    // TODO: Navigate to product verification page
+    // Generate mock product ID based on scanned result or use default
+    const productId = result || 'mock-tomatoes-batch-001';
+    navigate(`/product/${productId}`);
   };
 
   const benefits = [

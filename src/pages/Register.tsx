@@ -1,5 +1,6 @@
 ﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiFetch } from '@/lib/api';
 import { ArrowLeft, User, Phone, Lock, Eye, EyeOff, MapPin, Building, FileText, Users } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageSelector } from '@/components/LanguageSelector';
@@ -145,13 +146,14 @@ const Register = () => {
     }
     
     setIsLoading(true);
-    
-    // Simulate OTP sending delay
-    setTimeout(() => { 
-      setOtpSent(true); 
-      setIsLoading(false); 
-      console.log('OTP sent to:', formData.phoneNumber); 
-    }, 1500);
+    try {
+      await apiFetch<{ success: boolean }>('/auth/send-otp', { method: 'POST', body: { phoneOrEmail: formData.phoneNumber } });
+      setOtpSent(true);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -177,13 +179,17 @@ const Register = () => {
     }
     
     setIsLoading(true);
-    
-    // Simulate registration process
-    setTimeout(() => { 
-      console.log('Registration successful:', formData); 
-      setIsLoading(false); 
-      navigate(`/dashboard/${formData.role}`); 
-    }, 2000);
+    try {
+      await apiFetch('/auth/register', {
+        method: 'POST',
+        body: { phoneOrEmail: formData.phoneNumber, password: formData.password, role: formData.role, name: formData.fullName },
+      });
+      navigate('/login');
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const renderRoleSpecificFields = () => {
@@ -191,7 +197,7 @@ const Register = () => {
       case 'farmer': 
         return (
           <>
-            <div>
+            {/* <div>
               <Label htmlFor="farmName">{t('farmName')} *</Label>
               <Input 
                 id="farmName" 
@@ -200,7 +206,7 @@ const Register = () => {
                 className="mt-2" 
                 placeholder={t('enterFarmName')} 
               />
-            </div>
+            </div> */}
             <div>
               <Label htmlFor="farmLocation">{t('farmLocation')} *</Label>
               <Input 
@@ -446,7 +452,18 @@ const Register = () => {
                       />
                       {errors.fullName && <p className="text-red-500 text-sm mt-1">{errors.fullName}</p>}
                     </div>
-                    
+                    <div>
+                      <Label htmlFor="aadharNumber">{t('aadharNumberLabel')} *</Label>
+                      <Input 
+                        id="aadharNumber" 
+                        value={formData.aadharNumber} 
+                        onChange={(e) => handleInputChange('aadharNumber', e.target.value)} 
+                        className="mt-2" 
+                        placeholder={t('aadhar12Digit')} 
+                        maxLength={12} 
+                      />
+                      {errors.aadharNumber && <p className="text-red-500 text-sm mt-1">{errors.aadharNumber}</p>}
+                    </div>
                     <div>
                       <Label htmlFor="phoneNumber">{t('phoneNumber')} *</Label>
                       <div className="flex flex-col gap-2 mt-2">
@@ -473,18 +490,7 @@ const Register = () => {
                       {errors.phoneNumber && <p className="text-red-500 text-sm mt-1">{errors.phoneNumber}</p>}
                     </div>
                     
-                    <div>
-                      <Label htmlFor="aadharNumber">{t('aadharNumberLabel')} *</Label>
-                      <Input 
-                        id="aadharNumber" 
-                        value={formData.aadharNumber} 
-                        onChange={(e) => handleInputChange('aadharNumber', e.target.value)} 
-                        className="mt-2" 
-                        placeholder={t('aadhar12Digit')} 
-                        maxLength={12} 
-                      />
-                      {errors.aadharNumber && <p className="text-red-500 text-sm mt-1">{errors.aadharNumber}</p>}
-                    </div>
+                    
                     
                     {otpSent && (
                       <div>

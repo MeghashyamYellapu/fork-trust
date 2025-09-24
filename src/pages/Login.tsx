@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiFetch, saveAuth } from '@/lib/api';
 import { ArrowLeft, Phone, Lock, Eye, EyeOff, Smartphone } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageSelector } from '@/components/LanguageSelector';
@@ -38,12 +39,14 @@ const Login = () => {
     }
 
     setIsLoading(true);
-    // Mock OTP sending
-    setTimeout(() => {
+    try {
+      await apiFetch<{ success: boolean }>('/auth/send-otp', { method: 'POST', body: { phoneOrEmail: formData.phoneOrEmail } });
       setOtpSent(true);
+    } catch (e) {
+      console.error(e);
+    } finally {
       setIsLoading(false);
-      console.log('OTP sent to:', formData.phoneOrEmail);
-    }, 1500);
+    }
   };
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
@@ -64,16 +67,18 @@ const Login = () => {
     }
 
     setIsLoading(true);
-    
-    // Mock login - in real implementation, this would validate credentials
-    setTimeout(() => {
-      console.log('Login successful:', formData.phoneOrEmail);
+    try {
+      const data = await apiFetch<{ token: string; role: string; name?: string }>('/auth/login', {
+        method: 'POST',
+        body: { phoneOrEmail: formData.phoneOrEmail, password: formData.password },
+      });
+      saveAuth(data.token, data.role, data.name);
+      navigate(`/dashboard/${data.role}`);
+    } catch (e: any) {
+      setErrors({ password: e?.message || 'Login failed' });
+    } finally {
       setIsLoading(false);
-      
-      // Mock role detection - in real implementation, this would come from backend
-      const mockRole = 'farmer'; // This should be determined by the backend
-      navigate(`/dashboard/${mockRole}`);
-    }, 2000);
+    }
   };
 
   const handleOTPLogin = async (e: React.FormEvent) => {
@@ -90,16 +95,19 @@ const Login = () => {
     }
 
     setIsLoading(true);
-    
-    // Mock OTP verification
-    setTimeout(() => {
-      console.log('OTP login successful:', formData.phoneOrEmail);
+    try {
+      // For now, reuse password login structure after OTP sent
+      const data = await apiFetch<{ token: string; role: string; name?: string }>('/auth/login', {
+        method: 'POST',
+        body: { phoneOrEmail: formData.phoneOrEmail, password: formData.otp },
+      });
+      saveAuth(data.token, data.role, data.name);
+      navigate(`/dashboard/${data.role}`);
+    } catch (e: any) {
+      setErrors({ otp: e?.message || 'OTP login failed' });
+    } finally {
       setIsLoading(false);
-      
-      // Mock role detection
-      const mockRole = 'farmer';
-      navigate(`/dashboard/${mockRole}`);
-    }, 2000);
+    }
   };
 
   return (

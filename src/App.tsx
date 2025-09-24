@@ -12,6 +12,7 @@ import ValidatorDashboard from "./pages/ValidatorDashboard";
 import DistributorDashboard from "./pages/DistributorDashboard";
 import RetailerDashboard from "./pages/RetailerDashboard";
 import ConsumerQRResult from "./pages/ConsumerQRResult";
+import ProductDetails from "./pages/ProductDetails";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/dashboard/distributor" element={<DistributorDashboard />} />
             <Route path="/dashboard/retailer" element={<RetailerDashboard />} />
             <Route path="/qr-result" element={<ConsumerQRResult />} />
+            <Route path="/product/:id" element={<ProductDetails />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

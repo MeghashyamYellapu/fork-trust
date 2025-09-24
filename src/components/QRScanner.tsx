@@ -34,9 +34,17 @@ export const QRScanner: React.FC<QRScannerProps> = ({ isOpen, onClose, onScan })
         streamRef.current = stream;
       }
 
-      // Mock successful scan after 3 seconds
+      // Mock successful scan after 3 seconds with random product
       setTimeout(() => {
-        onScan('MOCK_QR_CODE_12345');
+        const mockProducts = [
+          'mock-tomatoes-batch-001',
+          'mock-rice-organic-002',
+          'mock-wheat-premium-003',
+          'mock-carrots-fresh-004',
+          'mock-apples-red-005'
+        ];
+        const randomProduct = mockProducts[Math.floor(Math.random() * mockProducts.length)];
+        onScan(randomProduct);
         stopScanning();
       }, 3000);
 
@@ -53,9 +61,32 @@ export const QRScanner: React.FC<QRScannerProps> = ({ isOpen, onClose, onScan })
       setScanMode('upload');
       setIsScanning(true);
       
-      // Mock QR code detection from image
+      // Mock QR code detection from image with product based on file name or random
       setTimeout(() => {
-        onScan('MOCK_QR_CODE_FROM_IMAGE_67890');
+        const fileName = file.name.toLowerCase();
+        let productId = 'mock-tomatoes-batch-001'; // default
+        
+        if (fileName.includes('rice')) {
+          productId = 'mock-rice-organic-002';
+        } else if (fileName.includes('wheat')) {
+          productId = 'mock-wheat-premium-003';
+        } else if (fileName.includes('carrot')) {
+          productId = 'mock-carrots-fresh-004';
+        } else if (fileName.includes('apple')) {
+          productId = 'mock-apples-red-005';
+        } else {
+          // Random selection for generic images
+          const mockProducts = [
+            'mock-tomatoes-batch-001',
+            'mock-rice-organic-002',
+            'mock-wheat-premium-003',
+            'mock-carrots-fresh-004',
+            'mock-apples-red-005'
+          ];
+          productId = mockProducts[Math.floor(Math.random() * mockProducts.length)];
+        }
+        
+        onScan(productId);
         setIsScanning(false);
         setScanMode(null);
       }, 2000);
