@@ -558,15 +558,15 @@ const FarmerDashboard = () => {
         )}
 
         {activeTab === 'add-product' && (
-          <Card className="card-elevated p-6 max-w-2xl">
-            <h3 className="text-lg font-semibold mb-6">{t('addNewProductTitle')}</h3>
-            <form onSubmit={handleSubmitProduct} className="space-y-6">
+          <Card className="card-elevated p-4 sm:p-6 w-full max-w-none lg:max-w-4xl mx-auto">
+            <h3 className="text-base sm:text-lg lg:text-xl font-semibold mb-4 sm:mb-6">{t('addNewProductTitle')}</h3>
+            <form onSubmit={handleSubmitProduct} className="space-y-4 sm:space-y-6">
               {/* Product Images Upload */}
               <div>
-                <Label className="text-lg">
+                <Label className="text-base sm:text-lg">
                   {language === 'en' ? 'Product Images' : 'उत्पाद की तस्वीरें'} *
                 </Label>
-                <div className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
+                <div className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-8 text-center hover:border-gray-400 transition-colors">
                   <input
                     type="file"
                     accept="image/*"
@@ -579,29 +579,29 @@ const FarmerDashboard = () => {
                   
                   {isAnalyzing ? (
                     <div className="flex flex-col items-center">
-                      <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                      <p className="text-blue-600 font-medium">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-3 sm:mb-4"></div>
+                      <p className="text-blue-600 font-medium text-sm sm:text-base text-center">
                         {language === 'en' ? 'AI Analyzing Image...' : 'AI तस्वीर का विश्लेषण कर रहा है...'}
                       </p>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-xs sm:text-sm text-gray-500 mt-1 text-center">
                         {language === 'en' ? 'Detecting product details automatically' : 'उत्पाद विवरण स्वचालित रूप से पहचाना जा रहा है'}
                       </p>
                     </div>
                   ) : (
                     <>
-                      <Camera className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-600 mb-4">
+                      <Camera className="w-10 h-10 sm:w-12 sm:h-12 text-gray-400 mx-auto mb-3 sm:mb-4" />
+                      <p className="text-gray-600 mb-3 sm:mb-4 text-sm sm:text-base text-center px-2">
                         {language === 'en' ? 'Click to upload product images - AI will auto-detect details!' : 'उत्पाद की तस्वीरें अपलोड करें - AI स्वतः विवरण पहचानेगा!'}
                       </p>
                       <label htmlFor="image-upload">
-                        <Button type="button" variant="outline" className="mb-2" asChild>
+                        <Button type="button" variant="outline" className="mb-2 text-sm sm:text-base" asChild>
                           <span>
                             <Upload className="w-4 h-4 mr-2" />
                             {language === 'en' ? 'Choose Images' : 'तस्वीरें चुनें'}
                           </span>
                         </Button>
                       </label>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-500 text-center">
                         {language === 'en' ? 'PNG, JPG, GIF up to 10MB each' : 'PNG, JPG, GIF प्रत्येक 10MB तक'}
                       </p>
                     </>
@@ -611,11 +611,13 @@ const FarmerDashboard = () => {
                 {/* Analysis Results */}
                 {analysisResults && (
                   <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                      <span className="text-green-800 font-medium">{analysisResults}</span>
+                    <div className="flex items-start sm:items-center gap-2 flex-col sm:flex-row">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                        <span className="text-green-800 font-medium text-sm sm:text-base">{analysisResults}</span>
+                      </div>
                     </div>
-                    <p className="text-sm text-green-700 mt-1">
+                    <p className="text-xs sm:text-sm text-green-700 mt-1">
                       {language === 'en' ? 'Form fields updated automatically. You can modify them if needed.' : 'फॉर्म फील्ड स्वचालित रूप से अपडेट हो गए। आवश्यकता अनुसार आप इन्हें संशोधित कर सकते हैं।'}
                     </p>
                     {/* Preview Product Details Button */}
@@ -629,7 +631,7 @@ const FarmerDashboard = () => {
                         }}
                         variant="outline"
                         size="sm"
-                        className="text-green-700 border-green-300 hover:bg-green-50"
+                        className="text-green-700 border-green-300 hover:bg-green-50 w-full sm:w-auto"
                       >
                         <Eye className="w-4 h-4 mr-2" />
                         {language === 'en' ? 'Preview Product Details' : 'उत्पाद विवरण देखें'}
@@ -650,16 +652,17 @@ const FarmerDashboard = () => {
                           <img
                             src={URL.createObjectURL(image)}
                             alt={`Product ${index + 1}`}
-                            className="w-20 h-20 object-cover rounded-lg border"
+                            className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg border"
                           />
                           <Button
                             type="button"
                             size="sm"
                             variant="outline"
-                            className="absolute -top-2 -right-2 w-6 h-6 p-0 rounded-full"
+                            className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-5 h-5 sm:w-6 sm:h-6 p-0 rounded-full"
                             onClick={() => setUploadedImages(prev => prev.filter((_, i) => i !== index))}
                           >
-                            <XCircle size={14} />
+                            <XCircle size={12} className="sm:hidden" />
+                            <XCircle size={14} className="hidden sm:block" />
                           </Button>
                         </div>
                       ))}
@@ -668,10 +671,10 @@ const FarmerDashboard = () => {
                 )}
               </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                     {/* Product Name */}
                     <div>
-                      <Label htmlFor="name" className="text-lg">
+                      <Label htmlFor="name" className="text-base sm:text-lg">
                         {language === 'en' ? 'Product Name' : 'उत्पाद का नाम'} *
                       </Label>
                       <Input
@@ -680,14 +683,14 @@ const FarmerDashboard = () => {
                         value={productForm.name}
                         onChange={(e) => handleInputChange('name', e.target.value)}
                         placeholder={language === 'en' ? 'Enter product name' : 'उत्पाद का नाम दर्ज करें'}
-                        className="mt-2 text-lg"
+                        className="mt-2 text-base sm:text-lg h-12 sm:h-14"
                         required
                       />
                     </div>
 
                     {/* Quantity */}
                     <div>
-                      <Label htmlFor="quantity" className="text-lg">
+                      <Label htmlFor="quantity" className="text-base sm:text-lg">
                         {language === 'en' ? 'Quantity' : 'मात्रा'} *
                       </Label>
                       <Input
@@ -696,14 +699,14 @@ const FarmerDashboard = () => {
                         value={productForm.quantity}
                         onChange={(e) => handleInputChange('quantity', e.target.value)}
                         placeholder={language === 'en' ? 'e.g., 100 kg, 50 units' : 'उदाहरण: 100 किलो, 50 यूनिट'}
-                        className="mt-2 text-lg"
+                        className="mt-2 text-base sm:text-lg h-12 sm:h-14"
                         required
                       />
                     </div>
 
                     {/* Price */}
                     <div>
-                      <Label htmlFor="price" className="text-lg">
+                      <Label htmlFor="price" className="text-base sm:text-lg">
                         {language === 'en' ? 'Price (₹)' : 'कीमत (₹)'} *
                       </Label>
                       <Input
@@ -712,18 +715,18 @@ const FarmerDashboard = () => {
                         value={productForm.price}
                         onChange={(e) => handleInputChange('price', e.target.value)}
                         placeholder={language === 'en' ? 'Enter price per unit' : 'प्रति यूनिट कीमत दर्ज करें'}
-                        className="mt-2 text-lg"
+                        className="mt-2 text-base sm:text-lg h-12 sm:h-14"
                         required
                       />
                     </div>
 
                     {/* Category */}
                     <div>
-                      <Label htmlFor="category" className="text-lg ">
+                      <Label htmlFor="category" className="text-base sm:text-lg">
                         {language === 'en' ? 'Category' : 'श्रेणी'} *
                       </Label>
                       <Select  value={productForm.category} onValueChange={(value) => handleInputChange('category', value)} required>
-                        <SelectTrigger className="mt-2 text-lg bg-green-50 border-green-300 hover:bg-green-100 focus:border-green-500 focus:ring-green-500">
+                        <SelectTrigger className="mt-2 text-base sm:text-lg h-12 sm:h-14 bg-green-50 border-green-300 hover:bg-green-100 focus:border-green-500 focus:ring-green-500">
                           <SelectValue placeholder={language === 'en' ? 'Select Category' : 'श्रेणी चुनें'} />
                         </SelectTrigger>
                         <SelectContent className="bg-green-50 border-green-300">
@@ -740,7 +743,7 @@ const FarmerDashboard = () => {
 
                     {/* Expiry Date */}
                     <div>
-                      <Label htmlFor="expiryDate" className="text-lg">
+                      <Label htmlFor="expiryDate" className="text-base sm:text-lg">
                         {language === 'en' ? 'Expiry / Best Before Date' : 'समाप्ति दिनांक'}
                       </Label>
                       <Input
@@ -748,39 +751,39 @@ const FarmerDashboard = () => {
                         type="date"
                         value={productForm.expiryDate}
                         onChange={(e) => handleInputChange('expiryDate', e.target.value)}
-                        className="mt-2 text-lg"
+                        className="mt-2 text-base sm:text-lg h-12 sm:h-14"
                       />
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-xs sm:text-sm text-gray-500 mt-1">
                         {language === 'en' ? 'For perishable goods' : 'नष्ट होने वाली वस्तुओं के लिए'}
                       </p>
                     </div>
 
                     {/* Batch Number (Auto-generated) */}
                     <div>
-                      <Label htmlFor="batchNumber" className="text-lg">
+                      <Label htmlFor="batchNumber" className="text-base sm:text-lg">
                         {language === 'en' ? 'Batch Number' : 'बैच संख्या'}
                       </Label>
                       <Input
                         id="batchNumber"
                         type="text"
                         value={productForm.batchNumber}
-                        className="mt-2 text-lg bg-gray-100"
+                        className="mt-2 text-base sm:text-lg h-12 sm:h-14 bg-gray-100"
                         readOnly
                       />
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-xs sm:text-sm text-gray-500 mt-1">
                         {language === 'en' ? 'Auto-generated for tracking' : 'ट्रैकिंग के लिए स्वतः उत्पन्न'}
                       </p>
                     </div>
 
                     {/* IoT Sensor Data Display */}
                     <div>
-                      <Label className="text-lg">
+                      <Label className="text-base sm:text-lg">
                         {language === 'en' ? 'IoT Sensor Data' : 'IoT सेंसर डेटा'}
                       </Label>
-                      <div className="mt-2 p-4 bg-green-50 rounded-lg border border-green-200">
+                      <div className="mt-2 p-3 sm:p-4 bg-green-50 rounded-lg border border-green-200">
                         <div className="flex items-center gap-2 mb-3">
-                          <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                          <span className="text-green-700 font-medium text-sm">
+                          <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-500 rounded-full animate-pulse"></div>
+                          <span className="text-green-700 font-medium text-xs sm:text-sm">
                             {language === 'en' ? 'Live from IoT devices' : 'IoT उपकरणों से लाइव'}
                           </span>
                           <Button
@@ -788,26 +791,27 @@ const FarmerDashboard = () => {
                             onClick={refreshIoTData}
                             size="sm"
                             variant="outline"
-                            className="ml-auto"
+                            className="ml-auto p-1 sm:p-2"
                           >
-                            <RefreshCw size={14} />
+                            <RefreshCw size={12} className="sm:hidden" />
+                            <RefreshCw size={14} className="hidden sm:block" />
                           </Button>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="flex items-center gap-2 p-2 bg-white rounded border">
-                            <Thermometer className="text-red-500" size={16} />
+                        <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                          <div className="flex items-center gap-1 sm:gap-2 p-2 bg-white rounded border">
+                            <Thermometer className="text-red-500" size={14} />
                             <div>
                               <p className="text-xs text-gray-600">{language === 'en' ? 'Temp' : 'तापमान'}</p>
-                              <p className="font-semibold text-sm">{productForm.iotSensorData.temperature}°C</p>
+                              <p className="font-semibold text-xs sm:text-sm">{productForm.iotSensorData.temperature}°C</p>
                             </div>
                           </div>
                           
-                          <div className="flex items-center gap-2 p-2 bg-white rounded border">
-                            <Droplet className="text-blue-500" size={16} />
+                          <div className="flex items-center gap-1 sm:gap-2 p-2 bg-white rounded border">
+                            <Droplet className="text-blue-500" size={14} />
                             <div>
                               <p className="text-xs text-gray-600">{language === 'en' ? 'Humidity' : 'आर्द्रता'}</p>
-                              <p className="font-semibold text-sm">{productForm.iotSensorData.humidity}%</p>
+                              <p className="font-semibold text-xs sm:text-sm">{productForm.iotSensorData.humidity}%</p>
                             </div>
                           </div>
                         </div>
@@ -816,13 +820,13 @@ const FarmerDashboard = () => {
 
                     {/* GPS Coordinates Display */}
                     <div>
-                      <Label className="text-lg">
+                      <Label className="text-base sm:text-lg">
                         {language === 'en' ? 'GPS Coordinates' : 'GPS निर्देशांक'}
                       </Label>
-                      <div className="mt-2 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="mt-2 p-3 sm:p-4 bg-blue-50 rounded-lg border border-blue-200">
                         <div className="flex items-center gap-2 mb-3">
-                          <MapPin className="text-blue-600" size={16} />
-                          <span className="text-blue-700 font-medium text-sm">
+                          <MapPin className="text-blue-600" size={14} />
+                          <span className="text-blue-700 font-medium text-xs sm:text-sm">
                             {language === 'en' ? 'Farm location' : 'खेत स्थान'}
                           </span>
                           <Button
@@ -830,21 +834,22 @@ const FarmerDashboard = () => {
                             onClick={refreshGPSCoordinates}
                             size="sm"
                             variant="outline"
-                            className="ml-auto"
+                            className="ml-auto p-1 sm:p-2"
                           >
-                            <RefreshCw size={14} />
+                            <RefreshCw size={12} className="sm:hidden" />
+                            <RefreshCw size={14} className="hidden sm:block" />
                           </Button>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-2 gap-2 sm:gap-3">
                           <div className="p-2 bg-white rounded border">
                             <p className="text-xs text-gray-600">{language === 'en' ? 'Latitude' : 'अक्षांश'}</p>
-                            <p className="font-semibold text-sm">{productForm.gpsCoordinates.latitude}°N</p>
+                            <p className="font-semibold text-xs sm:text-sm">{productForm.gpsCoordinates.latitude}°N</p>
                           </div>
                           
                           <div className="p-2 bg-white rounded border">
                             <p className="text-xs text-gray-600">{language === 'en' ? 'Longitude' : 'देशांतर'}</p>
-                            <p className="font-semibold text-sm">{productForm.gpsCoordinates.longitude}°E</p>
+                            <p className="font-semibold text-xs sm:text-sm">{productForm.gpsCoordinates.longitude}°E</p>
                           </div>
                         </div>
                       </div>
@@ -852,11 +857,11 @@ const FarmerDashboard = () => {
 
                     {/* Organic Type */}
                     <div>
-                      <Label htmlFor="organicType" className="text-lg">
+                      <Label htmlFor="organicType" className="text-base sm:text-lg">
                         {language === 'en' ? 'Organic Status' : 'जैविक स्थिति'}
                       </Label>
                       <Select value={productForm.organicType} onValueChange={(value) => handleInputChange('organicType', value)}>
-                        <SelectTrigger className="mt-2 text-lg bg-green-50 border-green-300 hover:bg-green-100 focus:border-green-500 focus:ring-green-500">
+                        <SelectTrigger className="mt-2 text-base sm:text-lg h-12 sm:h-14 bg-green-50 border-green-300 hover:bg-green-100 focus:border-green-500 focus:ring-green-500">
                           <SelectValue placeholder={language === 'en' ? 'Select Organic Type' : 'जैविक प्रकार चुनें'} />
                         </SelectTrigger>
                         <SelectContent className="bg-green-50 border-green-300">
@@ -870,7 +875,7 @@ const FarmerDashboard = () => {
 
                     {/* Harvest Date */}
                     <div>
-                      <Label htmlFor="harvestDate" className="text-lg">
+                      <Label htmlFor="harvestDate" className="text-base sm:text-lg">
                         {language === 'en' ? 'Harvest Date' : 'फसल की तारीख'}
                       </Label>
                       <Input
@@ -878,13 +883,13 @@ const FarmerDashboard = () => {
                         type="date"
                         value={productForm.harvestDate}
                         onChange={(e) => handleInputChange('harvestDate', e.target.value)}
-                        className="mt-2 text-lg"
+                        className="mt-2 text-base sm:text-lg h-12 sm:h-14"
                       />
                     </div>
 
                     {/* Farm Location */}
                     <div>
-                      <Label htmlFor="farmLocation" className="text-lg">
+                      <Label htmlFor="farmLocation" className="text-base sm:text-lg">
                         {language === 'en' ? 'Farm Location' : 'खेत का स्थान'}
                       </Label>
                       <Input
@@ -893,13 +898,13 @@ const FarmerDashboard = () => {
                         value={productForm.farmLocation}
                         onChange={(e) => handleInputChange('farmLocation', e.target.value)}
                         placeholder={language === 'en' ? 'Enter farm location' : 'खेत का स्थान दर्ज करें'}
-                        className="mt-2 text-lg"
+                        className="mt-2 text-base sm:text-lg h-12 sm:h-14"
                       />
                     </div>
 
                     {/* Packaging Date */}
                     <div>
-                      <Label htmlFor="packagingDate" className="text-lg">
+                      <Label htmlFor="packagingDate" className="text-base sm:text-lg">
                         {language === 'en' ? 'Packaging Date' : 'पैकेजिंग की तारीख'}
                       </Label>
                       <Input
@@ -907,14 +912,14 @@ const FarmerDashboard = () => {
                         type="date"
                         value={productForm.packagingDate}
                         onChange={(e) => handleInputChange('packagingDate', e.target.value)}
-                        className="mt-2 text-lg"
+                        className="mt-2 text-base sm:text-lg h-12 sm:h-14"
                       />
                     </div>
                   </div>
 
                   {/* Description */}
                   <div>
-                    <Label htmlFor="description" className="text-lg">
+                    <Label htmlFor="description" className="text-base sm:text-lg">
                       {language === 'en' ? 'Description' : 'विवरण'}
                     </Label>
                     <Textarea
@@ -922,17 +927,17 @@ const FarmerDashboard = () => {
                       value={productForm.description || ''}
                       onChange={(e) => handleInputChange('description', e.target.value)}
                       placeholder={language === 'en' ? 'Enter product description (optional)' : 'उत्पाद विवरण दर्ज करें (वैकल्पिक)'}
-                      className="mt-2 text-lg min-h-[100px]"
+                      className="mt-2 text-base sm:text-lg min-h-[80px] sm:min-h-[100px]"
                     />
                   </div>
 
                   {/* Submit Button */}
                   <Button
                     type="submit"
-                    className="w-full text-lg py-3 bg-green-600 hover:bg-green-700"
+                    className="w-full text-base sm:text-lg py-3 sm:py-4 bg-green-600 hover:bg-green-700 h-12 sm:h-16"
                     size="lg"
                   >
-                    <Upload className="mr-2" size={20} />
+                    <Upload className="mr-2" size={18} />
                     {language === 'en' ? 'Submit for Validation' : 'सत्यापन के लिए जमा करें'}
                   </Button>
             </form>

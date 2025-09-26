@@ -75,7 +75,7 @@ const Index = () => {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Leaf className="w-8 h-8 text-primary" />
-            <span className="font-bold text-xl text-foreground">FarmChain</span>
+            <span className="font-bold text-xl text-foreground">AgriTrust</span>
           </div>
           <LanguageSelector />
         </div>
@@ -196,7 +196,7 @@ const Index = () => {
             <div className="col-span-1 md:col-span-2">
               <div className="flex items-center gap-2 mb-4">
                 <Leaf className="w-8 h-8 text-primary" />
-                <span className="font-bold text-xl">FarmChain</span>
+                <span className="font-bold text-xl">AgriTrust</span>
               </div>
               <p className="text-muted mb-4 max-w-md">
                 Empowering transparent, sustainable agriculture through blockchain technology.
@@ -220,7 +220,7 @@ const Index = () => {
             </div>
           </div>
           <div className="border-t border-muted mt-8 pt-8 text-center text-muted">
-            <p>&copy; 2024 FarmChain. All rights reserved.</p>
+            <p>&copy; 2024 AgriTrust. All rights reserved.</p>
           </div>
         </div>
       </footer>

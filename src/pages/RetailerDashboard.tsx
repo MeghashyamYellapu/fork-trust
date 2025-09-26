@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import coconut from "@/assets/coconut.avif";
+import tomato from "@/assets/Tomatoes.avif";
+import red from "@/assets/redchillies.avif";
 import { 
   Star, 
   MapPin, 
@@ -39,7 +42,8 @@ const RetailerDashboard = () => {
       sold: 155,
       status: "In Stock",
       margin: 18,
-      rating: 4.8
+      rating: 4.8,
+      image: tomato
     },
     {
       id: 2,
@@ -50,7 +54,8 @@ const RetailerDashboard = () => {
       sold: 82,
       status: "Low Stock",
       margin: 15,
-      rating: 4.9
+      rating: 4.9,
+      image: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=300&fit=crop&auto=format&q=80"
     },
     {
       id: 3,
@@ -61,7 +66,8 @@ const RetailerDashboard = () => {
       sold: 67,
       status: "Out of Stock",
       margin: 20,
-      rating: 4.6
+      rating: 4.6,
+      image: "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=400&h=300&fit=crop&auto=format&q=80"
     },
     {
       id: 4,
@@ -72,7 +78,8 @@ const RetailerDashboard = () => {
       sold: 234,
       status: "In Stock",
       margin: 25,
-      rating: 4.7
+      rating: 4.7,
+      image: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=400&h=300&fit=crop&auto=format&q=80"
     }
   ];
 
@@ -87,7 +94,8 @@ const RetailerDashboard = () => {
       quantity: 500,
       quality: "Premium",
       rating: 4.8,
-      margin: "22%"
+      margin: "22%",
+      image: "https://images.unsplash.com/photo-1445282768818-728615cc910a?w=400&h=300&fit=crop&auto=format&q=80"
     },
     {
       id: 2,
@@ -98,7 +106,8 @@ const RetailerDashboard = () => {
       quantity: 200,
       quality: "Grade A",
       rating: 4.9,
-      margin: "28%"
+      margin: "28%",
+      image:red
     },
     {
       id: 3,
@@ -109,7 +118,8 @@ const RetailerDashboard = () => {
       quantity: 300,
       quality: "Fresh",
       rating: 4.7,
-      margin: "35%"
+      margin: "35%",
+      image: coconut
     }
   ];
 
@@ -158,7 +168,7 @@ const RetailerDashboard = () => {
       <div className="container mx-auto px-4 py-8 space-y-8">
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card className="bg-gradient-primary text-primary-foreground">
+          {/* <Card className="bg-gradient-primary text-primary-foreground">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -168,7 +178,7 @@ const RetailerDashboard = () => {
                 <IndianRupee className="w-8 h-8" />
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
           <Card className="bg-gradient-secondary text-secondary-foreground">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -191,7 +201,7 @@ const RetailerDashboard = () => {
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-success text-success-foreground">
+          {/* <Card className="bg-gradient-success text-success-foreground">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -201,7 +211,7 @@ const RetailerDashboard = () => {
                 <TrendingUp className="w-8 h-8" />
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
         </div>
 
         {/* Sales Overview */}
@@ -232,7 +242,42 @@ const RetailerDashboard = () => {
             </div>
           </CardContent>
         </Card>
-
+<Card>
+          <CardHeader>
+            <CardTitle className="text-2xl flex items-center">
+              <Users className="w-6 h-6 mr-3 text-primary" />
+              Customer Analytics
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="text-center p-4 bg-muted rounded-lg">
+                <div className="text-2xl font-bold text-primary mb-2">
+                  {customerStats.totalCustomers}
+                </div>
+                <div className="text-sm text-muted-foreground">Total Customers</div>
+              </div>
+              <div className="text-center p-4 bg-muted rounded-lg">
+                <div className="text-2xl font-bold text-success mb-2">
+                  +{customerStats.newCustomers}
+                </div>
+                <div className="text-sm text-muted-foreground">New This Week</div>
+              </div>
+              <div className="text-center p-4 bg-muted rounded-lg">
+                <div className="text-2xl font-bold text-warning mb-2">
+                  {customerStats.repeatCustomers}
+                </div>
+                <div className="text-sm text-muted-foreground">Repeat Customers</div>
+              </div>
+              <div className="text-center p-4 bg-muted rounded-lg">
+                <div className="text-2xl font-bold text-info mb-2">
+                  ₹{customerStats.avgOrderValue}
+                </div>
+                <div className="text-sm text-muted-foreground">Avg Order Value</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         {/* Current Inventory */}
         <Card>
           <CardHeader>
@@ -263,7 +308,35 @@ const RetailerDashboard = () => {
                 <tbody>
                   {inventory.map((item) => (
                     <tr key={item.id} className="border-b hover:bg-muted/50">
-                      <td className="p-4 font-medium">{item.name}</td>
+                      <td className="p-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0 relative">
+                            <img 
+                              src={item.image} 
+                              alt={item.name}
+                              className="w-full h-full object-cover"
+                              onLoad={(e) => {
+                                console.log(`Image loaded successfully: ${item.name}`);
+                              }}
+                              onError={(e) => {
+                                console.log(`Image failed to load: ${item.name}, URL: ${item.image}`);
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                const fallback = target.parentElement?.querySelector('.fallback-icon');
+                                if (fallback) {
+                                  (fallback as HTMLElement).style.display = 'flex';
+                                }
+                              }}
+                            />
+                            <div className="fallback-icon absolute inset-0 w-full h-full flex items-center justify-center bg-muted" style={{display: 'none'}}>
+                              <Package className="w-6 h-6 text-muted-foreground" />
+                            </div>
+                          </div>
+                          <div>
+                            <p className="font-medium">{item.name}</p>
+                          </div>
+                        </div>
+                      </td>
                       <td className="p-4">{item.supplier}</td>
                       <td className="p-4">{item.stock}kg</td>
                       <td className="p-4 font-semibold">₹{item.price}/kg</td>
@@ -343,8 +416,27 @@ const RetailerDashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {availableProducts.map((product) => (
                 <Card key={product.id} className="hover:shadow-lg transition-shadow">
-                  <div className="aspect-video bg-muted rounded-t-lg flex items-center justify-center">
-                    <Package className="w-16 h-16 text-muted-foreground" />
+                  <div className="aspect-video bg-muted rounded-t-lg overflow-hidden relative">
+                    <img 
+                      src={product.image} 
+                      alt={product.name}
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                      onLoad={(e) => {
+                        console.log(`Product image loaded: ${product.name}`);
+                      }}
+                      onError={(e) => {
+                        console.log(`Product image failed: ${product.name}, URL: ${product.image}`);
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const fallback = target.parentElement?.querySelector('.fallback-icon');
+                        if (fallback) {
+                          (fallback as HTMLElement).style.display = 'flex';
+                        }
+                      }}
+                    />
+                    <div className="fallback-icon absolute inset-0 w-full h-full flex items-center justify-center bg-muted" style={{display: 'none'}}>
+                      <Package className="w-16 h-16 text-muted-foreground" />
+                    </div>
                   </div>
                   <CardContent className="p-4">
                     <div className="space-y-3">
@@ -392,44 +484,9 @@ const RetailerDashboard = () => {
         </Card>
 
         {/* Customer Analytics */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl flex items-center">
-              <Users className="w-6 h-6 mr-3 text-primary" />
-              Customer Analytics
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <div className="text-2xl font-bold text-primary mb-2">
-                  {customerStats.totalCustomers}
-                </div>
-                <div className="text-sm text-muted-foreground">Total Customers</div>
-              </div>
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <div className="text-2xl font-bold text-success mb-2">
-                  +{customerStats.newCustomers}
-                </div>
-                <div className="text-sm text-muted-foreground">New This Week</div>
-              </div>
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <div className="text-2xl font-bold text-warning mb-2">
-                  {customerStats.repeatCustomers}
-                </div>
-                <div className="text-sm text-muted-foreground">Repeat Customers</div>
-              </div>
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <div className="text-2xl font-bold text-info mb-2">
-                  ₹{customerStats.avgOrderValue}
-                </div>
-                <div className="text-sm text-muted-foreground">Avg Order Value</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        
 
-        {/* Quick Actions */}
+        {/* Quick Actions
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">Quick Actions</CardTitle>
@@ -454,7 +511,7 @@ const RetailerDashboard = () => {
               </Button>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
     </div>
   );

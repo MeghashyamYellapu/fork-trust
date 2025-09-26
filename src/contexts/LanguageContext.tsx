@@ -17,9 +17,9 @@ interface Translations {
 const translations: Translations = {
   // Hero Section
   heroTitle: {
-    en: "Farm-to-Fork Transparency, Powered by Blockchain",
-    te: "బ్లాక్‌చెయిన్ ద్వారా సంపూర్ణ వ్యవసాయ పారదర్శకత",
-    hi: "ब्लॉकचेन द्वारा संचालित खेत-से-कांटा पारदर्शिता"
+    en: "Farm-to-Consumer Transparency & Intelligence Powered by Blockchain , Beckn & AI",
+    te: "ఫార్మ్-టు-కన్స్యూమర్ పారదర్శకత & మేధస్సు Blockchain , Beckn & AI ద్వారా ఆధారితం",
+    hi: "खेत-से-उपभोक्ता पारदर्शिता और बुद्धिमत्ता ब्लॉकचेन, बेकन और एआई द्वारा संचालित"
   },
   heroSubtitle: {
     en: "Connecting farmers, distributors, and consumers through transparent, verified supply chains",
