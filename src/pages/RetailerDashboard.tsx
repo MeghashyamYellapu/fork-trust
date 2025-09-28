@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import { useToast } from "@/hooks/use-toast";
+import { QRCodeButton } from "@/components/QRCodeDisplay";
 import coconut from "@/assets/coconut.avif";
 import tomato from "@/assets/Tomatoes.avif";
 import red from "@/assets/redchillies.avif";
@@ -22,14 +25,133 @@ import {
   Plus,
   BarChart3,
   Clock,
-  CheckCircle2
+  CheckCircle2,
+  LogOut,
+  Store
 } from "lucide-react";
+
+interface Product {
+  _id: string;
+  name: string;
+  quantity: number;
+  pricePerKg: number;
+  harvestDate: string;
+  description?: string;
+  status: string;
+  validatorsApproved: number;
+  totalValidators: number;
+  farmer: {
+    _id: string;
+    fullName?: string;
+    name?: string;
+  };
+  qrCode?: string;
+  createdAt: string;
+}
 
 const RetailerDashboard = () => {
   const { t } = useLanguage();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [filterLocation, setFilterLocation] = useState("");
   const [filterPrice, setFilterPrice] = useState("");
   const [filterStock, setFilterStock] = useState("");
+  const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch products available for retail (in-distribution status)
+  const fetchAvailableProducts = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:4000/api/products');
+      const products: Product[] = await response.json();
+      
+      console.log('All products from API:', products);
+      console.log('Product statuses:', products.map(p => ({ name: p.name, status: p.status })));
+      
+      // Filter only products in distribution (ready for retail)
+      const retailProducts = products.filter(p => 
+        p.status === 'in-distribution' || p.status === 'retail'
+      );
+      setAvailableProducts(retailProducts);
+      
+      console.log('Products available for retail:', retailProducts);
+    } catch (error) {
+      console.error('Failed to fetch products:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch available products",
+        variant: "destructive",
+      });
+      
+      // Fallback to mock data if API fails
+      setAvailableProducts([
+        {
+          _id: '1',
+          name: "Organic Tomatoes",
+          farmer: { _id: '1', fullName: "Fresh Mart Distributors" },
+          pricePerKg: 55,
+          quantity: 45,
+          status: 'in-distribution',
+          validatorsApproved: 5,
+          totalValidators: 5,
+          harvestDate: '2024-01-15',
+          createdAt: '2024-01-15T10:00:00Z',
+          description: "Premium organic tomatoes"
+        }
+      ] as Product[]);
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    fetchAvailableProducts();
+  }, [fetchAvailableProducts]);
+
+  // Handle logout
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
+    navigate('/login');
+  };
+
+  // Handle adding product to retail inventory
+  const handleAcceptForRetail = async (productId: string) => {
+    try {
+      console.log('Accepting product for retail:', productId);
+      console.log('Using token:', localStorage.getItem('token'));
+      
+      const response = await fetch(`http://localhost:4000/api/products/${productId}/retail`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+      console.log('Retail accept response:', response.status, data);
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Product added to retail inventory successfully",
+        });
+        fetchAvailableProducts(); // Refresh the list
+      } else {
+        console.error('Retail accept failed:', data);
+        throw new Error(data.message || 'Failed to add product to retail');
+      }
+    } catch (error) {
+      console.error('Error adding product to retail:', error);
+      toast({
+        title: "Error",
+        description: `Failed to add product to retail: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
 
   // Mock data for inventory
   const inventory = [
@@ -83,45 +205,8 @@ const RetailerDashboard = () => {
     }
   ];
 
-  // Mock data for available products from distributors
-  const availableProducts = [
-    {
-      id: 1,
-      name: "Organic Carrots",
-      distributor: "Farm Fresh Distributors",
-      location: "Hyderabad, Telangana",
-      price: 35,
-      quantity: 500,
-      quality: "Premium",
-      rating: 4.8,
-      margin: "22%",
-      image: "https://images.unsplash.com/photo-1445282768818-728615cc910a?w=400&h=300&fit=crop&auto=format&q=80"
-    },
-    {
-      id: 2,
-      name: "Red Chillies",
-      distributor: "Spice Valley Co.",
-      location: "Guntur, Andhra Pradesh",
-      price: 250,
-      quantity: 200,
-      quality: "Grade A",
-      rating: 4.9,
-      margin: "28%",
-      image:red
-    },
-    {
-      id: 3,
-      name: "Coconuts",
-      distributor: "Coastal Produce",
-      location: "Vijayawada, Andhra Pradesh",
-      price: 25,
-      quantity: 300,
-      quality: "Fresh",
-      rating: 4.7,
-      margin: "35%",
-      image: coconut
-    }
-  ];
+  // Mock data for available products - REPLACED WITH REAL API DATA
+  // This is now fetched from fetchAvailableProducts() function
 
   // Mock customer analytics
   const customerStats = {
@@ -151,67 +236,89 @@ const RetailerDashboard = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-card shadow-sm">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-foreground">Retailer Dashboard</h1>
-              <Badge variant="secondary" className="text-lg px-4 py-2">
-                <Star className="w-4 h-4 mr-1" />
+            <div className="flex items-center space-x-3">
+              <Store className="w-7 h-7 text-primary" />
+              <div>
+                <h1 className="text-xl font-bold text-foreground">Retailer Dashboard</h1>
+                <p className="text-xs text-muted-foreground">Retail Inventory Management</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Badge variant="secondary" className="text-sm px-3 py-1">
+                <Star className="w-3 h-3 mr-1" />
                 4.6 Store Rating
               </Badge>
+              <LanguageSelector />
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleLogout}
+                className="gap-2"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </Button>
             </div>
-            <LanguageSelector />
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8 space-y-8">
+      <div className="container mx-auto px-4 py-6 space-y-6">
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {/* <Card className="bg-gradient-primary text-primary-foreground">
-            <CardContent className="p-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-primary-foreground/80">Daily Revenue</p>
-                  <p className="text-3xl font-bold">₹15.4K</p>
+                  <p className="text-blue-100 text-sm">Available Products</p>
+                  <p className="text-2xl font-bold">{availableProducts.length}</p>
                 </div>
-                <IndianRupee className="w-8 h-8" />
-              </div>
-            </CardContent>
-          </Card> */}
-          <Card className="bg-gradient-secondary text-secondary-foreground">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-secondary-foreground/80">Total Customers</p>
-                  <p className="text-3xl font-bold">{customerStats.totalCustomers}</p>
-                </div>
-                <Users className="w-8 h-8" />
+                <Package className="w-6 h-6 text-blue-200" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-accent text-accent-foreground">
-            <CardContent className="p-6">
+          <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-accent-foreground/80">Products</p>
-                  <p className="text-3xl font-bold">{inventory.length}</p>
+                  <p className="text-green-100 text-sm">Total Quantity</p>
+                  <p className="text-2xl font-bold">
+                    {availableProducts.reduce((sum, p) => sum + p.quantity, 0)}kg
+                  </p>
                 </div>
-                <Package className="w-8 h-8" />
+                <TrendingUp className="w-6 h-6 text-green-200" />
               </div>
             </CardContent>
           </Card>
-          {/* <Card className="bg-gradient-success text-success-foreground">
-            <CardContent className="p-6">
+          <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-success-foreground/80">Avg Order</p>
-                  <p className="text-3xl font-bold">₹{customerStats.avgOrderValue}</p>
+                  <p className="text-purple-100 text-sm">Avg Price</p>
+                  <p className="text-2xl font-bold">
+                    ₹{availableProducts.length > 0 
+                      ? Math.round(availableProducts.reduce((sum, p) => sum + p.pricePerKg, 0) / availableProducts.length)
+                      : 0
+                    }/kg
+                  </p>
                 </div>
-                <TrendingUp className="w-8 h-8" />
+                <IndianRupee className="w-6 h-6 text-purple-200" />
               </div>
             </CardContent>
-          </Card> */}
+          </Card>
+          <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-orange-100 text-sm">Quality Verified</p>
+                  <p className="text-2xl font-bold">100%</p>
+                </div>
+                <CheckCircle2 className="w-6 h-6 text-orange-200" />
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Sales Overview */}
@@ -373,12 +480,12 @@ const RetailerDashboard = () => {
 
         {/* Available Products from Distributors */}
         <Card>
-          <CardHeader>
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
-              <CardTitle className="text-2xl">Available Products</CardTitle>
+          <CardHeader className="pb-4">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-3 md:space-y-0">
+              <CardTitle className="text-xl">Available Products for Retail</CardTitle>
               
               {/* Filters */}
-              <div className="flex flex-wrap items-center gap-4">
+              <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center space-x-2">
                   <Filter className="w-4 h-4" />
                   <span className="text-sm font-medium">Filters:</span>
@@ -387,10 +494,10 @@ const RetailerDashboard = () => {
                   placeholder="Location"
                   value={filterLocation}
                   onChange={(e) => setFilterLocation(e.target.value)}
-                  className="w-32"
+                  className="w-28 h-8"
                 />
                 <Select value={filterPrice} onValueChange={setFilterPrice}>
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-28 h-8">
                     <SelectValue placeholder="Price Range" />
                   </SelectTrigger>
                   <SelectContent>
@@ -400,85 +507,116 @@ const RetailerDashboard = () => {
                   </SelectContent>
                 </Select>
                 <Select value={filterStock} onValueChange={setFilterStock}>
-                  <SelectTrigger className="w-32">
-                    <SelectValue placeholder="Margin" />
+                  <SelectTrigger className="w-28 h-8">
+                    <SelectValue placeholder="Quality" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="high">High (25%+)</SelectItem>
-                    <SelectItem value="medium">Medium (15-25%)</SelectItem>
-                    <SelectItem value="low">Low (&lt;15%)</SelectItem>
+                    <SelectItem value="premium">Premium</SelectItem>
+                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="organic">Organic</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {availableProducts.map((product) => (
-                <Card key={product.id} className="hover:shadow-lg transition-shadow">
-                  <div className="aspect-video bg-muted rounded-t-lg overflow-hidden relative">
-                    <img 
-                      src={product.image} 
-                      alt={product.name}
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
-                      onLoad={(e) => {
-                        console.log(`Product image loaded: ${product.name}`);
-                      }}
-                      onError={(e) => {
-                        console.log(`Product image failed: ${product.name}, URL: ${product.image}`);
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        const fallback = target.parentElement?.querySelector('.fallback-icon');
-                        if (fallback) {
-                          (fallback as HTMLElement).style.display = 'flex';
-                        }
-                      }}
-                    />
-                    <div className="fallback-icon absolute inset-0 w-full h-full flex items-center justify-center bg-muted" style={{display: 'none'}}>
-                      <Package className="w-16 h-16 text-muted-foreground" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {loading ? (
+                <div className="col-span-full text-center py-6">
+                  <p className="text-muted-foreground">Loading products available for retail...</p>
+                </div>
+              ) : availableProducts.length === 0 ? (
+                <div className="col-span-full text-center py-6">
+                  <Package className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                  <h3 className="text-lg font-semibold text-foreground mb-2">No Products Available</h3>
+                  <p className="text-muted-foreground">No products are currently available for retail. Check back later.</p>
+                </div>
+              ) : (
+                availableProducts.map((product) => (
+                  <Card key={product._id} className="hover:shadow-md transition-shadow">
+                    <div className="aspect-video bg-muted rounded-t-lg flex items-center justify-center">
+                      <Package className="w-12 h-12 text-muted-foreground" />
                     </div>
-                  </div>
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
-                      <div>
-                        <h3 className="font-semibold text-lg">{product.name}</h3>
-                        <p className="text-sm text-muted-foreground">by {product.distributor}</p>
-                      </div>
-                      
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <MapPin className="w-4 h-4 mr-1" />
-                        {product.location}
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400 mr-1" />
-                          <span className="text-sm font-medium">{product.rating}</span>
-                        </div>
-                        <Badge variant="outline">{product.quality}</Badge>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <Badge className="bg-success text-success-foreground">
-                          +{product.margin} Margin
-                        </Badge>
-                        <span className="text-sm text-muted-foreground">{product.quantity}kg available</span>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
+                    <CardContent className="p-3">
+                      <div className="space-y-2">
                         <div>
-                          <p className="text-2xl font-bold text-primary">₹{product.price}/kg</p>
+                          <h3 className="font-semibold text-base">{product.name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            by {product.farmer?.fullName || product.farmer?.name || 'Producer'}
+                          </p>
+                        </div>
+                        
+                        <div className="flex items-center text-sm text-muted-foreground">
+                          <MapPin className="w-3 h-3 mr-1" />
+                          Farm Location
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <CheckCircle2 className="w-3 h-3 fill-green-400 text-green-400 mr-1" />
+                            <span className="text-xs font-medium">Quality Verified</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">
+                              {product.validatorsApproved}/{product.totalValidators} Verified
+                            </Badge>
+                            <Badge 
+                              variant={product.status === 'in-distribution' ? 'default' : 'secondary'}
+                              className="text-xs"
+                            >
+                              {product.status}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <Badge className="bg-blue-50 text-blue-700 text-xs">
+                            Ready for Retail
+                          </Badge>
+                          <span className="text-sm text-muted-foreground">{product.quantity}kg available</span>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xl font-bold text-primary">₹{product.pricePerKg}/kg</p>
+                            <p className="text-xs text-muted-foreground">Harvest: {product.harvestDate}</p>
+                          </div>
+                        </div>
+
+                        {product.description && (
+                          <div className="text-xs text-muted-foreground">
+                            <p className="truncate"><strong>Description:</strong> {product.description}</p>
+                          </div>
+                        )}
+
+                        {product.qrCode && (
+                          <div className="text-xs text-muted-foreground">
+                            <p><strong>QR Code:</strong> {product.qrCode}</p>
+                          </div>
+                        )}
+                        
+                        <div className="flex items-center space-x-2">
+                          <Button 
+                            className="flex-1 h-9"
+                            onClick={() => handleAcceptForRetail(product._id)}
+                            variant={product.status === 'in-distribution' ? 'default' : 'outline'}
+                          >
+                            <ShoppingCart className="w-4 h-4 mr-2" />
+                            {product.status === 'in-distribution' 
+                              ? 'Add to Store Inventory' 
+                              : `Already in Retail (${product.status})`
+                            }
+                          </Button>
+
+                          {product.qrCode && (
+                            <QRCodeButton qrCode={product.qrCode} productName={product.name} />
+                          )}
                         </div>
                       </div>
-                      
-                      <Button className="w-full">
-                        <ShoppingCart className="w-4 h-4 mr-2" />
-                        Add to Store
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </div>
           </CardContent>
         </Card>

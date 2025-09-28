@@ -8,57 +8,176 @@ type Request = express.Request;
 type Response = express.Response;
 
 export async function register(req: Request, res: Response) {
-  const { phoneOrEmail, password, role, name, otp } = req.body;
+  const { 
+    fullName, 
+    phoneNumber, 
+    aadharNumber, 
+    password, 
+    role, 
+    
+    // Location fields
+    state,
+    district,
+    address,
+    pincode,
+    
+    // Role-specific fields
+    farmName,
+    farmLocation,
+    landSize,
+    cropTypes,
+    companyName,
+    businessName,
+    licenseNumber,
+    operatingRegion,
+    businessLicense,
+    shopName,
+    shopLocation,
+    gstNumber,
+    organizationName,
+    designation,
+    validationId,
+    certificationDetails,
+    experience,
+    pinCode,
+    preferredLanguage,
+    
+    // Blockchain fields
+    walletAddress,
+    blockchainRegistered,
+    registrationTimestamp,
+    
+    // Legacy fields for backward compatibility
+    phoneOrEmail,
+    name
+  } = req.body;
   
-  if (!phoneOrEmail || !password || !role || !name) {
-    return res.status(400).json({ message: 'Missing required fields' });
+  // Use new field names or fall back to legacy ones
+  const actualFullName = fullName || name;
+  const actualPhoneNumber = phoneNumber || phoneOrEmail;
+  
+  if (!actualFullName || !actualPhoneNumber || !password || !role) {
+    return res.status(400).json({ message: 'Missing required fields: fullName, phoneNumber, password, and role are required' });
+  }
+
+  if (!aadharNumber && role !== 'consumer') {
+    return res.status(400).json({ message: 'Aadhar number is required for all roles except consumer' });
   }
   
-  // For development, allow registration without OTP verification
-  // In production, uncomment the OTP verification below
-  /*
-  if (!otp) {
-    return res.status(400).json({ message: 'OTP is required' });
+  // Check if user already exists by phone number, Aadhar, or wallet address
+  const existingByPhone = await User.findOne({ phoneNumber: actualPhoneNumber });
+  if (existingByPhone) {
+    return res.status(409).json({ message: 'User with this phone number already exists' });
   }
   
-  // Verify OTP before registration
-  const stored = otpStore.get(phoneOrEmail);
-  if (!stored || Date.now() > stored.expires || stored.otp !== otp) {
-    return res.status(400).json({ message: 'Invalid or expired OTP' });
+  if (aadharNumber) {
+    const existingByAadhar = await User.findOne({ aadharNumber });
+    if (existingByAadhar) {
+      return res.status(409).json({ message: 'User with this Aadhar number already exists' });
+    }
   }
   
-  // Remove OTP after successful verification
-  otpStore.delete(phoneOrEmail);
-  */
-  
-  const existing = await User.findOne({ phoneOrEmail });
-  if (existing) {
-    return res.status(409).json({ message: 'User already exists' });
+  if (walletAddress) {
+    const existingByWallet = await User.findOne({ walletAddress });
+    if (existingByWallet) {
+      return res.status(409).json({ message: 'User with this wallet address already exists' });
+    }
   }
   
   try {
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = await User.create({ phoneOrEmail, passwordHash, role, name });
+    
+    // Prepare user data with all fields
+    const userData: any = {
+      fullName: actualFullName,
+      phoneNumber: actualPhoneNumber,
+      aadharNumber: aadharNumber || '',
+      passwordHash,
+      role,
+      
+      // Location fields
+      state,
+      district, 
+      address,
+      pincode: pincode || pinCode, // Handle both field names
+      
+      // Blockchain fields
+      walletAddress,
+      blockchainRegistered: blockchainRegistered || false,
+      registrationTimestamp,
+      
+      // Legacy fields for backward compatibility
+      phoneOrEmail: actualPhoneNumber,
+      name: actualFullName
+    };
+    
+    // Add role-specific fields based on role
+    switch (role) {
+      case 'producer':
+        if (farmName) userData.farmName = farmName;
+        if (farmLocation) userData.farmLocation = farmLocation;
+        if (landSize) userData.landSize = landSize;
+        if (cropTypes) userData.cropTypes = cropTypes;
+        break;
+        
+      case 'distributor':
+        if (companyName) userData.companyName = companyName;
+        if (businessName) userData.businessName = businessName;
+        if (licenseNumber) userData.licenseNumber = licenseNumber;
+        if (operatingRegion) userData.operatingRegion = operatingRegion;
+        if (businessLicense) userData.businessLicense = businessLicense;
+        break;
+        
+      case 'retailer':
+        if (businessName) userData.businessName = businessName;
+        if (shopName) userData.shopName = shopName;
+        if (shopLocation) userData.shopLocation = shopLocation;
+        if (gstNumber) userData.gstNumber = gstNumber;
+        break;
+        
+      case 'quality-inspector':
+        if (organizationName) userData.organizationName = organizationName;
+        if (designation) userData.designation = designation;
+        if (validationId) userData.validationId = validationId;
+        if (certificationDetails) userData.certificationDetails = certificationDetails;
+        if (experience) userData.experience = experience;
+        break;
+        
+      case 'consumer':
+        if (pinCode) userData.pinCode = pinCode;
+        if (preferredLanguage) userData.preferredLanguage = preferredLanguage;
+        break;
+    }
+    
+    const user = await User.create(userData);
     
     // Generate token for immediate login
     const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET || 'devsecret', { expiresIn: '7d' });
     
     return res.status(201).json({ 
       id: user.id, 
-      phoneOrEmail, 
-      role, 
-      name,
-      token 
+      fullName: user.fullName,
+      phoneNumber: user.phoneNumber, 
+      role: user.role, 
+      walletAddress: user.walletAddress,
+      blockchainRegistered: user.blockchainRegistered,
+      token,
+      message: 'Registration successful',
+      // Legacy fields
+      phoneOrEmail: user.phoneNumber,
+      name: user.fullName
     });
   } catch (error: any) {
     console.error('Registration error:', error);
     
     // Handle MongoDB duplicate key errors
     if (error.code === 11000) {
-      if (error.message.includes('email_1')) {
-        return res.status(500).json({ 
-          message: 'Database configuration error. Please contact support or try the database fix endpoint: GET /api/auth/fix-database' 
-        });
+      if (error.message.includes('phoneNumber')) {
+        return res.status(409).json({ message: 'User with this phone number already exists' });
+      } else if (error.message.includes('aadharNumber')) {
+        return res.status(409).json({ message: 'User with this Aadhar number already exists' });
+      } else if (error.message.includes('walletAddress')) {
+        return res.status(409).json({ message: 'User with this wallet address already exists' });
       } else {
         return res.status(409).json({ message: 'User already exists' });
       }
@@ -69,13 +188,56 @@ export async function register(req: Request, res: Response) {
 }
 
 export async function login(req: Request, res: Response) {
-  const { phoneOrEmail, password } = req.body;
-  const user = await User.findOne({ phoneOrEmail });
-  if (!user) return res.status(401).json({ message: 'Invalid credentials' });
-  const ok = await bcrypt.compare(password, user.passwordHash);
-  if (!ok) return res.status(401).json({ message: 'Invalid credentials' });
-  const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET || 'devsecret', { expiresIn: '7d' });
-  res.json({ token, role: user.role, name: user.name });
+  try {
+    const { phoneOrEmail, password } = req.body;
+    
+    if (!phoneOrEmail || !password) {
+      return res.status(400).json({ message: 'Phone number/email and password are required' });
+    }
+    
+    // Support both new and legacy field names
+    let user = await User.findOne({ phoneNumber: phoneOrEmail });
+    if (!user) {
+      // Fallback to legacy field for backward compatibility
+      user = await User.findOne({ phoneOrEmail });
+    }
+    
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+    
+    const ok = await bcrypt.compare(password, user.passwordHash);
+    if (!ok) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+    
+    // Generate JWT token with userId and role
+    const jwtSecret = process.env.JWT_SECRET || 'devsecret_fallback_key';
+    const token = jwt.sign(
+      { userId: user._id, role: user.role }, 
+      jwtSecret, 
+      { expiresIn: '7d' }
+    );
+
+    console.log(`✅ Login successful for ${user.fullName} (${user.role})`);
+    
+    res.json({ 
+      success: true,
+      message: 'Login successful',
+      token,
+      user: {
+        id: user._id,
+        fullName: user.fullName,
+        phoneNumber: user.phoneNumber,
+        role: user.role,
+        walletAddress: user.walletAddress,
+        blockchainRegistered: user.blockchainRegistered
+      }
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'Login failed' });
+  }
 }
 
 // In-memory OTP storage (use Redis in production)
@@ -280,6 +442,99 @@ export async function resetPassword(req: Request, res: Response) {
   } catch (error) {
     console.error('Error resetting password:', error);
     res.status(500).json({ message: 'Failed to reset password' });
+  }
+}
+
+// Verify JWT token and return user data
+export async function verify(req: Request, res: Response) {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({ message: 'No token provided' });
+    }
+
+    const jwtSecret = process.env.JWT_SECRET || 'devsecret_fallback_key';
+    const decoded = jwt.verify(token, jwtSecret) as { userId: string; role?: string };
+    const user = await User.findById(decoded.userId).select('-passwordHash');
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        fullName: user.fullName,
+        phoneNumber: user.phoneNumber,
+        role: user.role,
+        walletAddress: user.walletAddress,
+        blockchainRegistered: user.blockchainRegistered
+      }
+    });
+  } catch (error) {
+    console.error('Token verification failed:', error);
+    res.status(401).json({ message: 'Invalid token' });
+  }
+}
+
+// Wallet-based login
+export async function walletLogin(req: Request, res: Response) {
+  try {
+    const { walletAddress } = req.body;
+    
+    if (!walletAddress) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Wallet address is required' 
+      });
+    }
+
+    console.log(`🔍 Looking for user with wallet address: ${walletAddress}`);
+
+    // Find user by wallet address (case-insensitive)
+    const user = await User.findOne({ 
+      walletAddress: { $regex: new RegExp(`^${walletAddress.replace('0x', '')}$`, 'i') }
+    });
+    
+    if (!user) {
+      console.log(`❌ No user found with wallet address: ${walletAddress}`);
+      return res.status(404).json({ 
+        success: false, 
+        message: 'No account found with this wallet address. Please register first or use a different login method.' 
+      });
+    }
+
+    // Generate JWT token
+    const jwtSecret = process.env.JWT_SECRET || 'devsecret_fallback_key';
+    const token = jwt.sign(
+      { userId: user._id, role: user.role }, 
+      jwtSecret, 
+      { expiresIn: '7d' }
+    );
+
+    console.log(`✅ Wallet login successful for ${user.fullName} (${user.role})`);
+    
+    res.json({
+      success: true,
+      message: 'Wallet login successful',
+      token,
+      user: {
+        id: user._id,
+        fullName: user.fullName,
+        phoneNumber: user.phoneNumber,
+        role: user.role,
+        walletAddress: user.walletAddress,
+        blockchainRegistered: user.blockchainRegistered
+      }
+    });
+  } catch (error) {
+    console.error('❌ Wallet login error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Wallet login failed' 
+    });
   }
 }
 

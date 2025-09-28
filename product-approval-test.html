@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Approval Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        .container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        button { background: #007bff; color: white; padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; margin: 10px; }
+        button:hover { background: #0056b3; }
+        .result { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        input { padding: 10px; margin: 10px; border: 1px solid #ddd; border-radius: 5px; width: 200px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Product Approval Test</h1>
+        
+        <div>
+            <h3>Step 1: Get Products</h3>
+            <button onclick="getProducts()">Fetch Products</button>
+        </div>
+        
+        <div>
+            <h3>Step 2: Test Approval</h3>
+            <input type="text" id="productId" placeholder="Product ID" />
+            <button onclick="approveProduct()">Approve Product</button>
+            <button onclick="rejectProduct()">Reject Product</button>
+        </div>
+        
+        <div>
+            <h3>Step 3: Check Authentication</h3>
+            <input type="text" id="token" placeholder="JWT Token (from localStorage)" />
+            <button onclick="testAuth()">Test Auth</button>
+            <button onclick="debugAuth()">Debug Auth API</button>
+        </div>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:4000/api';
+        
+        async function getProducts() {
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                const response = await fetch(`${API_BASE}/products`);
+                const products = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <div class="result success">
+                        <h4>✅ Products fetched successfully!</h4>
+                        <pre>${JSON.stringify(products, null, 2)}</pre>
+                        ${products.length > 0 ? `<p><strong>Sample Product ID:</strong> ${products[0]._id}</p>` : ''}
+                    </div>
+                `;
+                
+                // Auto-fill the first product ID
+                if (products.length > 0) {
+                    document.getElementById('productId').value = products[0]._id;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h4>❌ Error fetching products</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        async function approveProduct() {
+            const productId = document.getElementById('productId').value;
+            const token = localStorage.getItem('token') || document.getElementById('token').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!productId) {
+                resultDiv.innerHTML = `<div class="result error">❌ Please enter a Product ID</div>`;
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/products/${productId}/vote`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        decision: 'approve'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            <h4>✅ Product approved successfully!</h4>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="result error">
+                            <h4>❌ Failed to approve product</h4>
+                            <p>Status: ${response.status}</p>
+                            <p>Error: ${result.message || 'Unknown error'}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h4>❌ Network error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        async function rejectProduct() {
+            const productId = document.getElementById('productId').value;
+            const token = localStorage.getItem('token') || document.getElementById('token').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!productId) {
+                resultDiv.innerHTML = `<div class="result error">❌ Please enter a Product ID</div>`;
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/products/${productId}/vote`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        decision: 'reject',
+                        reason: 'Test rejection'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            <h4>✅ Product rejected successfully!</h4>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="result error">
+                            <h4>❌ Failed to reject product</h4>
+                            <p>Status: ${response.status}</p>
+                            <p>Error: ${result.message || 'Unknown error'}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h4>❌ Network error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function testAuth() {
+            const token = localStorage.getItem('token') || document.getElementById('token').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (token) {
+                // Decode JWT to show payload
+                try {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            <h4>✅ Token found</h4>
+                            <p><strong>Token:</strong> ${token.substring(0, 50)}...</p>
+                            <p><strong>Payload:</strong></p>
+                            <pre>${JSON.stringify(payload, null, 2)}</pre>
+                        </div>
+                    `;
+                } catch (error) {
+                    resultDiv.innerHTML = `
+                        <div class="result error">
+                            <h4>❌ Invalid token format</h4>
+                            <p>Token: ${token.substring(0, 100)}...</p>
+                        </div>
+                    `;
+                }
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h4>❌ No token found</h4>
+                        <p>Please login first or enter a token manually</p>
+                    </div>
+                `;
+            }
+        }
+        
+        async function debugAuth() {
+            const token = localStorage.getItem('token') || document.getElementById('token').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!token) {
+                resultDiv.innerHTML = `<div class="result error">❌ No token available</div>`;
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/products/debug/auth`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            <h4>✅ Authentication successful!</h4>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="result error">
+                            <h4>❌ Authentication failed</h4>
+                            <p>Status: ${response.status}</p>
+                            <p>Error: ${result.message || 'Unknown error'}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h4>❌ Network error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Auto-load token on page load
+        window.onload = function() {
+            const token = localStorage.getItem('token');
+            if (token) {
+                document.getElementById('token').value = token.substring(0, 50) + '...';
+            }
+        };
+    </script>
+</body>
+</html>

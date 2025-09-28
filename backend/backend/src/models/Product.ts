@@ -6,7 +6,7 @@ export interface IProduct extends Document {
   pricePerKg: number;
   harvestDate: string;
   description?: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'in-distribution' | 'retail' | 'sold';
   validatorsApproved: number;
   totalValidators: number;
   rejectionReason?: string;
@@ -20,7 +20,11 @@ const ProductSchema = new Schema<IProduct>({
   pricePerKg: { type: Number, required: true },
   harvestDate: { type: String, required: true },
   description: String,
-  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  status: { 
+    type: String, 
+    enum: ['pending', 'approved', 'rejected', 'in-distribution', 'retail', 'sold'], 
+    default: 'pending' 
+  },
   validatorsApproved: { type: Number, default: 0 },
   totalValidators: { type: Number, default: 5 },
   rejectionReason: String,

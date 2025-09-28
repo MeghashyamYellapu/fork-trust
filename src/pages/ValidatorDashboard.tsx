@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Shield, 
@@ -24,6 +24,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 
 interface PendingProduct {
   id: string;
@@ -41,63 +42,84 @@ interface PendingProduct {
   myVote?: 'approved' | 'rejected' | null;
 }
 
+interface ApiProduct {
+  _id: string;
+  name: string;
+  quantity: number;
+  pricePerKg: number;
+  harvestDate: string;
+  createdAt: string;
+  description?: string;
+  status?: string;
+  validatorsApproved?: number;
+  totalValidators?: number;
+}
+
 const ValidatorDashboard = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'pending' | 'consensus' | 'history' | 'reputation'>('pending');
   const [selectedProduct, setSelectedProduct] = useState<PendingProduct | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [showImageModal, setShowImageModal] = useState(false);
+  const [pendingProducts, setPendingProducts] = useState<PendingProduct[]>([]);
+
+  // Fetch products from API
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await fetch('http://localhost:4000/api/products');
+        const products: ApiProduct[] = await response.json();
+        
+        // Convert API products to PendingProduct format and filter for pending ones
+        const formattedProducts = products
+          .filter((p) => p.status === 'pending' || !p.status)
+          .map((p) => ({
+            id: p._id,
+            farmerName: 'Producer', // TODO: Get from farmer data
+            farmLocation: 'Farm Location', // TODO: Get from farmer profile  
+            productName: p.name,
+            quantity: p.quantity,
+            pricePerKg: p.pricePerKg,
+            harvestDate: p.harvestDate,
+            uploadDate: p.createdAt,
+            images: [], // TODO: Handle product images
+            description: p.description || '',
+            validatorsApproved: p.validatorsApproved || 0,
+            totalValidators: p.totalValidators || 5,
+            myVote: null as 'approved' | 'rejected' | null
+          }));
+        
+        setPendingProducts(formattedProducts);
+      } catch (error) {
+        console.error('Failed to fetch products:', error);
+        // Fallback to mock data
+        setPendingProducts([
+          {
+            id: '1',
+            farmerName: 'Ramesh Kumar',
+            farmLocation: 'Village Khandala, Pune, Maharashtra',
+            productName: 'Organic Tomatoes',
+            quantity: 500,
+            pricePerKg: 45,
+            harvestDate: '2024-01-25',
+            uploadDate: '2024-01-26',
+            images: ['/api/placeholder/300/200', '/api/placeholder/300/200'],
+            description: 'Fresh organic tomatoes grown without pesticides. Rich in vitamins and perfect for cooking.',
+            validatorsApproved: 2,
+            totalValidators: 5,
+            myVote: null,
+          }
+        ]);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   // Mock data
-  const [pendingProducts] = useState<PendingProduct[]>([
-    {
-      id: '1',
-      farmerName: 'Rajesh Kumar',
-      farmLocation: 'Guntur, Andhra Pradesh',
-      productName: 'Organic Rice',
-      quantity: 500,
-      pricePerKg: 45,
-      harvestDate: '2024-01-15',
-      uploadDate: '2024-01-16',
-      images: ['rice1.jpg', 'rice2.jpg', 'rice3.jpg'],
-      description: 'Premium quality Basmati rice, grown without pesticides',
-      validatorsApproved: 2,
-      totalValidators: 5,
-      myVote: null,
-    },
-    {
-      id: '2',
-      farmerName: 'Priya Devi',
-      farmLocation: 'Krishna, Andhra Pradesh',
-      productName: 'Fresh Tomatoes',
-      quantity: 200,
-      pricePerKg: 30,
-      harvestDate: '2024-01-20',
-      uploadDate: '2024-01-21',
-      images: ['tomato1.jpg', 'tomato2.jpg'],
-      description: 'Vine-ripened tomatoes, perfect for cooking',
-      validatorsApproved: 4,
-      totalValidators: 5,
-      myVote: 'approved',
-    },
-    {
-      id: '3',
-      farmerName: 'Suresh Reddy',
-      farmLocation: 'Warangal, Telangana',
-      productName: 'Cotton',
-      quantity: 100,
-      pricePerKg: 85,
-      harvestDate: '2024-01-10',
-      uploadDate: '2024-01-12',
-      images: ['cotton1.jpg'],
-      description: 'High-quality cotton suitable for textile manufacturing',
-      validatorsApproved: 1,
-      totalValidators: 5,
-      myVote: null,
-    },
-  ]);
-
+  // Mock data
   const [validatorStats] = useState({
     reputationScore: 4.8,
     totalValidations: 156,
@@ -105,21 +127,101 @@ const ValidatorDashboard = () => {
     rank: 12,
   });
 
-  const handleVote = (productId: string, vote: 'approved' | 'rejected') => {
+  const handleVote = async (productId: string, vote: 'approved' | 'rejected') => {
     if (vote === 'rejected' && !rejectionReason.trim()) {
-      alert('Please provide a reason for rejection');
+      toast({
+        title: "Rejection reason required",
+        description: "Please provide a reason for rejection",
+        variant: "destructive",
+      });
       return;
     }
 
-    console.log('Vote submitted:', { productId, vote, reason: rejectionReason });
-    
-    // Update the product's vote status
-    const product = pendingProducts.find(p => p.id === productId);
-    if (product) {
-      product.myVote = vote;
-      if (vote === 'approved') {
-        product.validatorsApproved += 1;
+    try {
+      // Backend expects 'approve' or 'reject' (not 'approved' or 'rejected')
+      const decision = vote === 'approved' ? 'approve' : 'reject';
+      const token = localStorage.getItem('token');
+      
+      console.log('=== DEBUGGING APPROVAL REQUEST ===');
+      console.log('Product ID:', productId);
+      console.log('Vote:', vote);
+      console.log('Decision:', decision);
+      console.log('Token exists:', !!token);
+      
+      // Decode token to check role
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          console.log('JWT Payload:', payload);
+          console.log('User Role:', payload.role);
+        } catch (e) {
+          console.log('Could not decode token:', e);
+        }
       }
+      
+      console.log('Sending vote request:', {
+        productId,
+        decision,
+        reason: vote === 'rejected' ? rejectionReason : undefined
+      });
+      
+      const response = await fetch(`http://localhost:4000/api/products/${productId}/vote`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          decision,
+          reason: vote === 'rejected' ? rejectionReason : undefined 
+        })
+      });
+
+      const responseData = await response.json();
+      console.log('Response Status:', response.status);
+      console.log('Response Data:', responseData);
+
+      if (response.ok) {
+        toast({
+          title: vote === 'approved' ? "Product Approved" : "Product Rejected",
+          description: `The product has been ${vote} successfully.`,
+        });
+        
+        // Update the local state
+        setPendingProducts(prevProducts => 
+          prevProducts.map(p => 
+            p.id === productId 
+              ? { 
+                  ...p, 
+                  myVote: vote,
+                  validatorsApproved: vote === 'approved' ? p.validatorsApproved + 1 : p.validatorsApproved
+                }
+              : p
+          )
+        );
+        
+        setRejectionReason('');
+        setSelectedProduct(null);
+      } else {
+        throw new Error(responseData.message || `Failed to ${vote} product`);
+      }
+    } catch (error) {
+      console.error(`Error ${vote}ing product:`, error);
+      
+      // More detailed error handling
+      let errorMessage = `Failed to ${vote} product. Please try again.`;
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
     }
 
     setSelectedProduct(null);
@@ -150,6 +252,13 @@ const ValidatorDashboard = () => {
               <Star className="w-4 h-4 text-warning" />
               <span className="font-medium">{validatorStats.reputationScore}</span>
             </div>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/farmer')}
+              className="gap-2"
+            >
+              🌾 Farmer Dashboard
+            </Button>
             <LanguageSelector />
             <Button 
               variant="outline" 
@@ -228,7 +337,7 @@ const ValidatorDashboard = () => {
             <Button
               key={tab.id}
               variant={activeTab === tab.id ? 'default' : 'outline'}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id as 'pending' | 'consensus' | 'history' | 'reputation')}
               className="gap-2"
             >
               <tab.icon className="w-4 h-4" />

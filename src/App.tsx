@@ -13,6 +13,8 @@ import DistributorDashboard from "./pages/DistributorDashboard";
 import RetailerDashboard from "./pages/RetailerDashboard";
 import ConsumerQRResult from "./pages/ConsumerQRResult";
 import ProductDetails from "./pages/ProductDetails";
+import ProductDetail from "./pages/ProductDetail";
+import QRTestPage from "./pages/QRTestPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,7 +35,9 @@ const App = () => (
             <Route path="/dashboard/distributor" element={<DistributorDashboard />} />
             <Route path="/dashboard/retailer" element={<RetailerDashboard />} />
             <Route path="/qr-result" element={<ConsumerQRResult />} />
-            <Route path="/product/:id" element={<ProductDetails />} />
+            <Route path="/product/details/:id" element={<ProductDetails />} />
+            <Route path="/product/:productId" element={<ProductDetail />} />
+            <Route path="/qr-test" element={<QRTestPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

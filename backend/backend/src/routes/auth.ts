@@ -5,7 +5,9 @@ import {
   sendOtp, 
   verifyOtp, 
   sendForgotPasswordOtp, 
-  resetPassword 
+  resetPassword,
+  verify,
+  walletLogin
 } from '../controllers/authController.js';
 
 const { Router } = express;
@@ -15,6 +17,8 @@ const router = Router();
 // Authentication routes
 router.post('/register', register);
 router.post('/login', login);
+router.post('/wallet-login', walletLogin);
+router.get('/verify', verify);
 
 // OTP routes
 router.post('/send-otp', sendOtp);

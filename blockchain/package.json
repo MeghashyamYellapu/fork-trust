@@ -1,0 +1,21 @@
+{
+  "name": "fork-trust-blockchain",
+  "version": "1.0.0",
+  "description": "Smart contracts for Fork Trust supply chain application",
+  "scripts": {
+    "anvil": "../foundry/anvil --host 0.0.0.0 --port 8545",
+    "deploy": "../foundry/forge script script/DeploySupplyChain.s.sol --rpc-url http://localhost:8545 --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --broadcast",
+    "build": "../foundry/forge build",
+    "test": "../foundry/forge test",
+    "clean": "../foundry/forge clean"
+  },
+  "keywords": [
+    "blockchain",
+    "solidity",
+    "supply-chain",
+    "foundry",
+    "ethereum"
+  ],
+  "author": "Fork Trust Team",
+  "license": "MIT"
+}

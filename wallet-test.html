@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wallet Connection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .info {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 Wallet Connection Test</h1>
+        
+        <div class="info">
+            <h3>Expected Distributor Wallet:</h3>
+            <p><strong>Address:</strong> 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC</p>
+            <p><strong>Network:</strong> Anvil Local (Chain ID: 31337)</p>
+            <p><strong>RPC:</strong> http://127.0.0.1:8545</p>
+        </div>
+
+        <button onclick="connectWallet()">Connect Wallet</button>
+        <button onclick="checkNetwork()">Check Network</button>
+        <button onclick="checkBalance()">Check Balance</button>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        let account = null;
+        
+        async function connectWallet() {
+            const resultDiv = document.getElementById('result');
+            
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+                    account = accounts[0];
+                    
+                    if (account.toLowerCase() === '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC'.toLowerCase()) {
+                        resultDiv.innerHTML = `<div class="success">✅ Distributor wallet connected successfully!<br>Address: ${account}</div>`;
+                    } else {
+                        resultDiv.innerHTML = `<div class="error">⚠️ Wrong wallet connected.<br>Current: ${account}<br>Expected: 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC</div>`;
+                    }
+                } catch (error) {
+                    resultDiv.innerHTML = `<div class="error">❌ Error connecting wallet: ${error.message}</div>`;
+                }
+            } else {
+                resultDiv.innerHTML = `<div class="error">❌ MetaMask not detected. Please install MetaMask.</div>`;
+            }
+        }
+
+        async function checkNetwork() {
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                const chainId = await ethereum.request({ method: 'eth_chainId' });
+                const chainIdDecimal = parseInt(chainId, 16);
+                
+                if (chainIdDecimal === 31337) {
+                    resultDiv.innerHTML = `<div class="success">✅ Connected to Anvil Local Network<br>Chain ID: ${chainIdDecimal}</div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">⚠️ Wrong network<br>Current Chain ID: ${chainIdDecimal}<br>Expected: 31337</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error checking network: ${error.message}</div>`;
+            }
+        }
+
+        async function checkBalance() {
+            const resultDiv = document.getElementById('result');
+            
+            if (!account) {
+                resultDiv.innerHTML = `<div class="error">❌ Please connect wallet first</div>`;
+                return;
+            }
+            
+            try {
+                const balance = await ethereum.request({
+                    method: 'eth_getBalance',
+                    params: [account, 'latest']
+                });
+                
+                const balanceInEth = parseInt(balance, 16) / Math.pow(10, 18);
+                resultDiv.innerHTML = `<div class="success">✅ Balance: ${balanceInEth.toFixed(2)} ETH<br>Address: ${account}</div>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error checking balance: ${error.message}</div>`;
+            }
+        }
+
+        // Auto-detect network changes
+        if (typeof window.ethereum !== 'undefined') {
+            ethereum.on('chainChanged', (chainId) => {
+                const chainIdDecimal = parseInt(chainId, 16);
+                console.log('Network changed to:', chainIdDecimal);
+                location.reload();
+            });
+
+            ethereum.on('accountsChanged', (accounts) => {
+                console.log('Account changed to:', accounts[0]);
+                location.reload();
+            });
+        }
+    </script>
+</body>
+</html>

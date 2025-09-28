@@ -1,12 +1,20 @@
-# Welcome to your Lovable project
+# Fork Trust - Blockchain Supply Chain Application
 
-## Project info
+A modern, decentralized supply chain management application built with React, TypeScript, and Ethereum smart contracts.
 
-**URL**: https://lovable.dev/projects/ebd1c395-a4b0-4de9-9823-a25bf6cbc691
+## 🚀 Quick Start
 
-## How can I edit this code?
+### Option 1: Automated Setup (Recommended)
+```bash
+# Windows
+setup.bat
 
-There are several ways of editing your application.
+# Linux/macOS  
+chmod +x setup.sh
+./setup.sh
+```
+
+### Option 2: Manual Setup
 
 **Use Lovable**
 

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test - Distributor Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        button { padding: 10px 20px; margin: 10px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .result { background: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; margin: 10px 0; }
+        .error { background: #f8d7da; border-color: #f5c6cb; }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+    </style>
+</head>
+<body>
+    <h1>API Test - Distributor Dashboard</h1>
+    
+    <h2>Test Backend Connection</h2>
+    <button onclick="testBackend()">Test Backend Health</button>
+    <button onclick="testGetProducts()">Get Products</button>
+    <button onclick="testAuth()">Test Auth (needs token)</button>
+    
+    <div id="result"></div>
+
+    <script>
+        const resultDiv = document.getElementById('result');
+
+        function displayResult(title, data, isError = false) {
+            const className = isError ? 'result error' : 'result success';
+            resultDiv.innerHTML = `
+                <div class="${className}">
+                    <h3>${title}</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                </div>
+            `;
+        }
+
+        async function testBackend() {
+            try {
+                const response = await fetch('http://localhost:4000/api/health');
+                const data = await response.json();
+                displayResult('Backend Health Test', { status: response.status, data });
+            } catch (error) {
+                displayResult('Backend Health Test Failed', { error: error.message }, true);
+            }
+        }
+
+        async function testGetProducts() {
+            try {
+                const response = await fetch('http://localhost:4000/api/products');
+                const data = await response.json();
+                displayResult('Get Products Test', { 
+                    status: response.status, 
+                    count: data.length, 
+                    products: data.slice(0, 2) // Show first 2 products
+                });
+            } catch (error) {
+                displayResult('Get Products Test Failed', { error: error.message }, true);
+            }
+        }
+
+        async function testAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                displayResult('Auth Test Failed', { error: 'No token found in localStorage' }, true);
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:4000/api/products/debug/auth', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                displayResult('Auth Test', { status: response.status, data });
+            } catch (error) {
+                displayResult('Auth Test Failed', { error: error.message }, true);
+            }
+        }
+
+        // Test accept product function (needs product ID and token)
+        async function testAcceptProduct(productId) {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                displayResult('Accept Product Test Failed', { error: 'No token found in localStorage' }, true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`http://localhost:4000/api/products/${productId}/accept`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                displayResult('Accept Product Test', { status: response.status, data });
+            } catch (error) {
+                displayResult('Accept Product Test Failed', { error: error.message }, true);
+            }
+        }
+
+        // Auto-run basic tests on page load
+        window.onload = () => {
+            console.log('Testing API endpoints...');
+            testBackend();
+        };
+    </script>
+</body>
+</html>

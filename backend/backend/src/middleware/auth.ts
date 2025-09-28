@@ -14,10 +14,15 @@ export function requireAuth(req: AuthRequest, res: Response, next: NextFunction)
   if (!header || !header.startsWith('Bearer ')) return res.status(401).json({ message: 'Unauthorized' });
   const token = header.slice('Bearer '.length);
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'devsecret') as any;
-    req.user = { id: decoded.id, role: decoded.role };
+    const jwtSecret = process.env.JWT_SECRET || 'devsecret_fallback_key';
+    const decoded = jwt.verify(token, jwtSecret) as any;
+    // Handle both old and new JWT structures
+    const userId = decoded.userId || decoded.id;
+    const userRole = decoded.role || 'producer'; // Default to producer for backward compatibility
+    req.user = { id: userId, role: userRole };
     next();
-  } catch {
+  } catch (error) {
+    console.error('JWT verification failed:', error);
     return res.status(401).json({ message: 'Invalid token' });
   }
 }

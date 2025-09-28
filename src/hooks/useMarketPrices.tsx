@@ -29,6 +29,7 @@ export const useMarketPrices = (stateName: string = 'ODISHA', autoRefresh: boole
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [currentState, setCurrentState] = useState<string>(stateName);
+  const [usingMockData, setUsingMockData] = useState(false);
 
   const fetchMarketPrices = useCallback(async (state?: string) => {
     try {
@@ -42,15 +43,15 @@ export const useMarketPrices = (stateName: string = 'ODISHA', autoRefresh: boole
         setMarketPrices(response.data);
         setLastUpdated(new Date());
         setCurrentState(stateParam);
+        setUsingMockData(false);
       } else {
         throw new Error(response.message || 'Failed to fetch market prices');
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred while fetching market prices';
-      setError(errorMessage);
-      console.error('Error fetching market prices:', err);
+      console.log('API unavailable, using mock market data:', errorMessage);
       
-      // Fallback to mock data if API fails
+      // Fallback to mock data if API fails (don't set error state)
       setMarketPrices([
         {
           crop: 'Rice',
@@ -114,6 +115,8 @@ export const useMarketPrices = (stateName: string = 'ODISHA', autoRefresh: boole
         }
       ]);
       setLastUpdated(new Date());
+      setUsingMockData(true);
+      setError(null); // Clear error when using fallback data
     } finally {
       setLoading(false);
     }
@@ -159,6 +162,7 @@ export const useMarketPrices = (stateName: string = 'ODISHA', autoRefresh: boole
     refreshPrices,
     getPriceForCrop,
     changeState,
-    refetch: fetchMarketPrices
+    refetch: fetchMarketPrices,
+    usingMockData
   };
 };

@@ -3,6 +3,12 @@ import dotenv from 'dotenv';
 // Configure dotenv FIRST before importing any other modules
 dotenv.config();
 
+// Debug: Log environment variables
+console.log('Environment variables loaded:');
+console.log('- PORT:', process.env.PORT);
+console.log('- JWT_SECRET:', process.env.JWT_SECRET ? '***SET***' : 'NOT SET');
+console.log('- MONGO_URI:', process.env.MONGO_URI ? '***SET***' : 'NOT SET');
+
 import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
@@ -20,7 +26,7 @@ app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://shyam:Shyam%40mongodb@cluster0.nmbgu.mongodb.net/farm?retryWrites=true&w=majority&appName=Cluster0';
+const MONGODB_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/forktrust';
 
 // Health
 app.get('/api/health', (_req, res) => {

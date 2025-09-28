@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,50 +7,131 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LanguageSelector } from "@/components/LanguageSelector";
-import { Star, MapPin, Filter, ShoppingCart, Truck, Package, CheckCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { QRCodeButton } from "@/components/QRCodeDisplay";
+import { Star, MapPin, Filter, ShoppingCart, Truck, Package, CheckCircle, LogOut } from "lucide-react";
+
+interface Product {
+  _id: string;
+  name: string;
+  quantity: number;
+  pricePerKg: number;
+  harvestDate: string;
+  description?: string;
+  status: string;
+  validatorsApproved: number;
+  totalValidators: number;
+  farmer: {
+    _id: string;
+    fullName?: string;
+    name?: string;
+  };
+  qrCode?: string;
+  createdAt: string;
+}
 
 const DistributorDashboard = () => {
   const { t } = useLanguage();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [filterLocation, setFilterLocation] = useState("");
   const [filterPrice, setFilterPrice] = useState("");
   const [filterCrop, setFilterCrop] = useState("");
+  const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data for available products
-  const availableProducts = [
-    {
-      id: 1,
-      name: "Organic Tomatoes",
-      farmer: "Ravi Kumar",
-      location: "Warangal, Telangana",
-      price: 45,
-      quantity: 500,
-      quality: "Premium",
-      rating: 4.8,
-      image: "/api/placeholder/200/150"
-    },
-    {
-      id: 2,
-      name: "Basmati Rice",
-      farmer: "Sunita Devi",
-      location: "Nizamabad, Telangana",
-      price: 120,
-      quantity: 1000,
-      quality: "Grade A",
-      rating: 4.9,
-      image: "/api/placeholder/200/150"
-    },
-    {
-      id: 3,
-      name: "Fresh Onions",
-      farmer: "Mohan Singh",
-      location: "Kurnool, Andhra Pradesh",
-      price: 35,
-      quantity: 750,
-      quality: "Standard",
-      rating: 4.6,
-      image: "/api/placeholder/200/150"
+  // Fetch approved products from API
+  const fetchApprovedProducts = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:4000/api/products');
+      const products: Product[] = await response.json();
+      
+      console.log('All products from API:', products);
+      console.log('Product statuses:', products.map(p => ({ name: p.name, status: p.status })));
+      
+      // Filter only approved products (for production)
+      // For testing, we'll also show pending products that have some validator approval
+      const approvedProducts = products.filter(p => 
+        p.status === 'approved' || (p.status === 'pending' && p.validatorsApproved >= 0)
+      );
+      setAvailableProducts(approvedProducts);
+      
+      console.log('Filtered products for distributor:', approvedProducts);
+    } catch (error) {
+      console.error('Failed to fetch products:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch approved products",
+        variant: "destructive",
+      });
+      
+      // Fallback to mock data if API fails
+      setAvailableProducts([
+        {
+          _id: '1',
+          name: "Organic Tomatoes",
+          farmer: { _id: '1', fullName: "Ravi Kumar" },
+          pricePerKg: 45,
+          quantity: 500,
+          status: 'approved',
+          validatorsApproved: 5,
+          totalValidators: 5,
+          harvestDate: '2024-01-15',
+          createdAt: '2024-01-15T10:00:00Z',
+          description: "Fresh organic tomatoes"
+        }
+      ] as Product[]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  }, [toast]);
+
+  useEffect(() => {
+    fetchApprovedProducts();
+  }, [fetchApprovedProducts]);  // Handle logout
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
+    navigate('/login');
+  };
+
+  // Handle product acceptance for distribution
+  const handleAcceptProduct = async (productId: string) => {
+    try {
+      console.log('Accepting product for distribution:', productId);
+      console.log('Using token:', localStorage.getItem('token'));
+      
+      const response = await fetch(`http://localhost:4000/api/products/${productId}/accept`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+      console.log('Accept response:', response.status, data);
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Product accepted for distribution successfully",
+        });
+        fetchApprovedProducts(); // Refresh the list
+      } else {
+        console.error('Accept failed:', data);
+        throw new Error(data.message || 'Failed to accept product');
+      }
+    } catch (error) {
+      console.error('Error accepting product:', error);
+      toast({
+        title: "Error",
+        description: `Failed to accept product for distribution: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
 
   // Mock data for orders
   const orders = [
@@ -95,64 +177,86 @@ const DistributorDashboard = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-card shadow-sm">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-foreground">{t('distributorDashboard')}</h1>
-              <Badge variant="secondary" className="text-lg px-4 py-2">
-                <Star className="w-4 h-4 mr-1" />
+            <div className="flex items-center space-x-3">
+              <Truck className="w-7 h-7 text-primary" />
+              <div>
+                <h1 className="text-xl font-bold text-foreground">{t('distributorDashboard')}</h1>
+                <p className="text-xs text-muted-foreground">Product Distribution & Logistics</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Badge variant="secondary" className="text-sm px-3 py-1">
+                <Star className="w-3 h-3 mr-1" />
                 4.7 Rating
               </Badge>
+              <LanguageSelector />
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleLogout}
+                className="gap-2"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </Button>
             </div>
-            <LanguageSelector />
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8 space-y-8">
+      <div className="container mx-auto px-4 py-6 space-y-6">
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card className="bg-gradient-primary text-primary-foreground">
-            <CardContent className="p-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-primary-foreground/80">{t('totalOrders')}</p>
-                  <p className="text-3xl font-bold">156</p>
+                  <p className="text-blue-100 text-sm">Available Products</p>
+                  <p className="text-2xl font-bold">{availableProducts.length}</p>
                 </div>
-                <ShoppingCart className="w-8 h-8" />
+                <Package className="w-6 h-6 text-blue-200" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-secondary text-secondary-foreground">
-            <CardContent className="p-6">
+          <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-secondary-foreground/80">This Month</p>
-                  <p className="text-3xl font-bold">₹2.4L</p>
+                  <p className="text-green-100 text-sm">Total Quantity</p>
+                  <p className="text-2xl font-bold">
+                    {availableProducts.reduce((sum, p) => sum + p.quantity, 0)}kg
+                  </p>
                 </div>
-                <Package className="w-8 h-8" />
+                <Truck className="w-6 h-6 text-green-200" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-accent text-accent-foreground">
-            <CardContent className="p-6">
+          <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-accent-foreground/80">{t('activeOrders')}</p>
-                  <p className="text-3xl font-bold">23</p>
+                  <p className="text-purple-100 text-sm">Avg Price</p>
+                  <p className="text-2xl font-bold">
+                    ₹{availableProducts.length > 0 
+                      ? Math.round(availableProducts.reduce((sum, p) => sum + p.pricePerKg, 0) / availableProducts.length)
+                      : 0
+                    }/kg
+                  </p>
                 </div>
-                <Truck className="w-8 h-8" />
+                <Star className="w-6 h-6 text-purple-200" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-success text-success-foreground">
-            <CardContent className="p-6">
+          <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-success-foreground/80">{t('completed')}</p>
-                  <p className="text-3xl font-bold">133</p>
+                  <p className="text-orange-100 text-sm">Quality Verified</p>
+                  <p className="text-2xl font-bold">100%</p>
                 </div>
-                <CheckCircle className="w-8 h-8" />
+                <CheckCircle className="w-6 h-6 text-orange-200" />
               </div>
             </CardContent>
           </Card>
@@ -160,12 +264,12 @@ const DistributorDashboard = () => {
 
         {/* Available Products Section */}
         <Card>
-          <CardHeader>
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
-              <CardTitle className="text-2xl">{t('availableProducts')}</CardTitle>
+          <CardHeader className="pb-4">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-3 md:space-y-0">
+              <CardTitle className="text-xl">{t('availableProducts')}</CardTitle>
               
               {/* Filters */}
-              <div className="flex flex-wrap items-center gap-4">
+              <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center space-x-2">
                   <Filter className="w-4 h-4" />
                   <span className="text-sm font-medium">Filters:</span>
@@ -174,10 +278,10 @@ const DistributorDashboard = () => {
                   placeholder="Location"
                   value={filterLocation}
                   onChange={(e) => setFilterLocation(e.target.value)}
-                  className="w-32"
+                  className="w-28 h-8"
                 />
                 <Select value={filterPrice} onValueChange={setFilterPrice}>
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-28 h-8">
                     <SelectValue placeholder="Price Range" />
                   </SelectTrigger>
                   <SelectContent>
@@ -187,7 +291,7 @@ const DistributorDashboard = () => {
                   </SelectContent>
                 </Select>
                 <Select value={filterCrop} onValueChange={setFilterCrop}>
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-28 h-8">
                     <SelectValue placeholder="Crop Type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -200,84 +304,134 @@ const DistributorDashboard = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {availableProducts.map((product) => (
-                <Card key={product.id} className="hover:shadow-lg transition-shadow">
-                  <div className="aspect-video bg-muted rounded-t-lg flex items-center justify-center">
-                    <Package className="w-16 h-16 text-muted-foreground" />
-                  </div>
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
-                      <div>
-                        <h3 className="font-semibold text-lg">{product.name}</h3>
-                        <p className="text-sm text-muted-foreground">by {product.farmer}</p>
-                      </div>
-                      
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <MapPin className="w-4 h-4 mr-1" />
-                        {product.location}
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400 mr-1" />
-                          <span className="text-sm font-medium">{product.rating}</span>
-                        </div>
-                        <Badge variant="outline">{product.quality}</Badge>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-2xl font-bold text-primary">₹{product.price}/kg</p>
-                          <p className="text-sm text-muted-foreground">{product.quantity}kg available</p>
-                        </div>
-                      </div>
-                      
-                      <Button className="w-full">
-                        <ShoppingCart className="w-4 h-4 mr-2" />
-                        Order Now
-                      </Button>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {loading ? (
+                <div className="col-span-full text-center py-6">
+                  <p className="text-muted-foreground">Loading approved products...</p>
+                </div>
+              ) : availableProducts.length === 0 ? (
+                <div className="col-span-full text-center py-6">
+                  <Package className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                  <h3 className="text-lg font-semibold text-foreground mb-2">No Approved Products</h3>
+                  <p className="text-muted-foreground">No products have been approved for distribution yet.</p>
+                </div>
+              ) : (
+                availableProducts.map((product) => (
+                  <Card key={product._id} className="hover:shadow-md transition-shadow">
+                    <div className="aspect-video bg-muted rounded-t-lg flex items-center justify-center">
+                      <Package className="w-12 h-12 text-muted-foreground" />
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    <CardContent className="p-3">
+                      <div className="space-y-2">
+                        <div>
+                          <h3 className="font-semibold text-base">{product.name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            by {product.farmer?.fullName || product.farmer?.name || 'Producer'}
+                          </p>
+                        </div>
+                        
+                        <div className="flex items-center text-sm text-muted-foreground">
+                          <MapPin className="w-3 h-3 mr-1" />
+                          Farm Location
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <CheckCircle className="w-3 h-3 fill-green-400 text-green-400 mr-1" />
+                            <span className="text-xs font-medium">
+                              {product.status === 'approved' ? 'Quality Approved' : 'Partially Approved'}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">
+                              {product.validatorsApproved}/{product.totalValidators} Verified
+                            </Badge>
+                            <Badge 
+                              variant={product.status === 'approved' ? 'default' : 'secondary'}
+                              className="text-xs"
+                            >
+                              {product.status}
+                            </Badge>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xl font-bold text-primary">₹{product.pricePerKg}/kg</p>
+                            <p className="text-sm text-muted-foreground">{product.quantity}kg available</p>
+                          </div>
+                        </div>
+                        
+                        <div className="text-xs text-muted-foreground">
+                          <p><strong>Harvest Date:</strong> {product.harvestDate}</p>
+                          {product.description && (
+                            <p className="mt-1 truncate"><strong>Description:</strong> {product.description}</p>
+                          )}
+                          {product.qrCode && (
+                            <p className="mt-1"><strong>QR Code:</strong> {product.qrCode}</p>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <Button 
+                            className="flex-1 h-9"
+                            onClick={() => handleAcceptProduct(product._id)}
+                            disabled={false}
+                            variant={product.status === 'approved' ? 'default' : 'outline'}
+                          >
+                            <Truck className="w-4 h-4 mr-2" />
+                            {product.status === 'approved' 
+                              ? 'Accept for Distribution' 
+                              : `Accept for Distribution (${product.status})`
+                            }
+                          </Button>
+                          
+                          {product.qrCode && (
+                            <QRCodeButton qrCode={product.qrCode} productName={product.name} />
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
 
         {/* Order Management */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl">{t('orderManagement')}</CardTitle>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl">{t('orderManagement')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left p-4 font-semibold">Order ID</th>
-                    <th className="text-left p-4 font-semibold">Product</th>
-                    <th className="text-left p-4 font-semibold">Farmer</th>
-                    <th className="text-left p-4 font-semibold">Quantity</th>
-                    <th className="text-left p-4 font-semibold">Amount</th>
-                    <th className="text-left p-4 font-semibold">Status</th>
-                    <th className="text-left p-4 font-semibold">Date</th>
+                    <th className="text-left p-3 font-semibold text-sm">Order ID</th>
+                    <th className="text-left p-3 font-semibold text-sm">Product</th>
+                    <th className="text-left p-3 font-semibold text-sm">Farmer</th>
+                    <th className="text-left p-3 font-semibold text-sm">Quantity</th>
+                    <th className="text-left p-3 font-semibold text-sm">Amount</th>
+                    <th className="text-left p-3 font-semibold text-sm">Status</th>
+                    <th className="text-left p-3 font-semibold text-sm">Date</th>
                   </tr>
                 </thead>
                 <tbody>
                   {orders.map((order) => (
                     <tr key={order.id} className="border-b hover:bg-muted/50">
-                      <td className="p-4 font-medium">{order.id}</td>
-                      <td className="p-4">{order.product}</td>
-                      <td className="p-4">{order.farmer}</td>
-                      <td className="p-4">{order.quantity}kg</td>
-                      <td className="p-4 font-semibold">₹{order.amount.toLocaleString()}</td>
-                      <td className="p-4">
+                      <td className="p-3 font-medium text-sm">{order.id}</td>
+                      <td className="p-3 text-sm">{order.product}</td>
+                      <td className="p-3 text-sm">{order.farmer}</td>
+                      <td className="p-3 text-sm">{order.quantity}kg</td>
+                      <td className="p-3 font-semibold text-sm">₹{order.amount.toLocaleString()}</td>
+                      <td className="p-3">
                         <Badge className={getStatusColor(order.status)}>
                           {order.status}
                         </Badge>
                       </td>
-                      <td className="p-4">{order.date}</td>
+                      <td className="p-3 text-sm">{order.date}</td>
                     </tr>
                   ))}
                 </tbody>

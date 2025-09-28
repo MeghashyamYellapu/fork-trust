@@ -1,16 +1,22 @@
-﻿import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/lib/api';
-import { ArrowLeft, User, Phone, Lock, Eye, EyeOff, MapPin, Building, FileText, Users } from 'lucide-react';
+import { ArrowLeft, User, Phone, Lock, Eye, EyeOff, MapPin, Building, FileText, Users, Wallet, CheckCircle, AlertCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageSelector } from '@/components/LanguageSelector';
+import { WalletConnection } from '@/components/WalletConnection';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { initWeb3, formatAddress } from '@/utils/web3';
+import { ethers } from 'ethers';
 
-type UserRole = 'farmer' | 'distributor' | 'retailer' | 'validator' | 'consumer';
+type UserRole = 'producer' | 'distributor' | 'retailer' | 'quality-inspector' | 'consumer';
 
 interface FormData {
   fullName: string;
@@ -19,10 +25,20 @@ interface FormData {
   password: string;
   confirmPassword: string;
   role: UserRole | '';
+  
+  // Location fields
+  state?: string;
+  district?: string;
+  address?: string;
+  pincode?: string;
+  
+  // Role-specific fields
   farmName?: string;
   farmLocation?: string;
   landSize?: string;
+  cropTypes?: string;
   companyName?: string;
+  businessName?: string;
   licenseNumber?: string;
   operatingRegion?: string;
   shopName?: string;
@@ -31,13 +47,32 @@ interface FormData {
   organizationName?: string;
   designation?: string;
   validationId?: string;
-  pinCode?: string;
+  businessLicense?: string;
+  certificationDetails?: string;
+  experience?: string;
   preferredLanguage?: string;
+  
+  // Blockchain fields
+  walletAddress?: string;
+  blockchainRegistered?: boolean;
 }
 
 const Register = () => {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  // State management
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [contract, setContract] = useState<ethers.Contract | null>(null);
+  const [isBlockchainConnected, setIsBlockchainConnected] = useState(false);
+  const [isBlockchainRegistering, setIsBlockchainRegistering] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  
   const [formData, setFormData] = useState<FormData>({
     fullName: '',
     phoneNumber: '',
@@ -45,148 +80,278 @@ const Register = () => {
     password: '',
     confirmPassword: '',
     role: '',
+    state: '',
+    district: '',
+    address: '',
+    pincode: '',
+    walletAddress: '',
+    blockchainRegistered: false,
   });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
-  const [otp, setOtp] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const roles = [
     { 
-      value: 'farmer', 
-      labelKey: 'farmer', 
+      value: 'producer', 
+      labelKey: 'Producer/Farmer', 
       icon: User, 
       color: 'bg-green-500', 
-      hoverColor: 'hover:bg-green-600' 
+      hoverColor: 'hover:bg-green-600',
+      description: 'Add products to supply chain'
     },
     { 
       value: 'distributor', 
-      labelKey: 'distributor', 
+      labelKey: 'Distributor', 
       icon: Building, 
       color: 'bg-blue-500', 
-      hoverColor: 'hover:bg-blue-600' 
+      hoverColor: 'hover:bg-blue-600',
+      description: 'Manage product distribution'
     },
     { 
       value: 'retailer', 
-      labelKey: 'retailer', 
+      labelKey: 'Retailer', 
       icon: Building, 
       color: 'bg-purple-500', 
-      hoverColor: 'hover:bg-purple-600' 
+      hoverColor: 'hover:bg-purple-600',
+      description: 'Sell products to consumers'
     },
     { 
-      value: 'validator', 
-      labelKey: 'validator', 
+      value: 'quality-inspector', 
+      labelKey: 'Quality Inspector', 
       icon: FileText, 
       color: 'bg-orange-500', 
-      hoverColor: 'hover:bg-orange-600' 
-    },
-    { 
-      value: 'consumer', 
-      labelKey: 'consumer', 
-      icon: Users, 
-      color: 'bg-pink-500', 
-      hoverColor: 'hover:bg-pink-600' 
-    },
+      hoverColor: 'hover:bg-orange-600',
+      description: 'Validate and certify products'
+    }
   ];
+
+  const indianStates = [
+    'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+    'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
+    'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram',
+    'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
+    'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal'
+  ];
+
+  // Initialize blockchain connection
+  useEffect(() => {
+    const initBlockchain = async () => {
+      try {
+        const { contract: web3Contract, account } = await initWeb3();
+        setContract(web3Contract);
+        if (account) {
+          setWalletAddress(account);
+          setIsBlockchainConnected(true);
+          setFormData(prev => ({ ...prev, walletAddress: account }));
+        }
+      } catch (error) {
+        console.error('Blockchain initialization failed:', error);
+        setIsBlockchainConnected(false);
+      }
+    };
+
+    initBlockchain();
+  }, []);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: '' }));
   };
 
-  const validateForm = () => {
+  // Handle wallet connection
+  const handleWalletConnect = (address: string) => {
+    setWalletAddress(address);
+    setIsBlockchainConnected(true);
+    setFormData(prev => ({ ...prev, walletAddress: address }));
+    toast({
+      title: "Wallet Connected",
+      description: "You can now register using blockchain",
+    });
+  };
+
+  // Blockchain registration function
+  const handleBlockchainRegistration = async () => {
+    if (!contract || !walletAddress || !formData.role) {
+      toast({
+        title: "Error",
+        description: "Please connect wallet and select a role",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    setIsBlockchainRegistering(true);
+    try {
+      // Get the signer directly to avoid ENS resolution issues
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contractWithSigner = contract.connect(signer);
+      
+      let tx;
+      
+      switch (formData.role) {
+        case 'producer':
+          tx = await contractWithSigner.registerProducer(
+            formData.fullName, 
+            formData.farmLocation || formData.address || 'Location not specified'
+          );
+          break;
+        case 'quality-inspector':
+          tx = await contractWithSigner.registerQualityInspector(
+            formData.fullName, 
+            formData.certificationDetails || 'Certification details not specified'
+          );
+          break;
+        case 'retailer':
+          tx = await contractWithSigner.registerRetailer(
+            formData.fullName, 
+            formData.businessName || 'Business name not specified'
+          );
+          break;
+        case 'distributor':
+          tx = await contractWithSigner.registerDistributor(
+            formData.fullName, 
+            formData.businessLicense || 'License not specified'
+          );
+          break;
+        default:
+          throw new Error('Invalid role selected');
+      }
+      
+      // Wait for transaction confirmation
+      const receipt = await tx.wait();
+      console.log('Blockchain registration successful:', receipt);
+      
+      toast({
+        title: "Blockchain Registration Successful",
+        description: `Registered as ${formData.role} on blockchain`,
+      });
+      
+      return true;
+    } catch (error: unknown) {
+      console.error('Blockchain registration error:', error);
+      
+      // Handle specific error types
+      const err = error as { code?: string; operation?: string; message?: string };
+      if (err.code === 'UNSUPPORTED_OPERATION' && err.operation === 'getEnsAddress') {
+        toast({
+          title: "ENS Error",
+          description: "Local blockchain doesn't support ENS. Please use direct contract interaction.",
+          variant: "destructive"
+        });
+      } else if (err.code === 'ACTION_REJECTED') {
+        toast({
+          title: "Transaction Rejected",
+          description: "User rejected the blockchain transaction",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Blockchain Registration Failed",
+          description: err.message || "Please try again or contact support",
+          variant: "destructive"
+        });
+      }
+      return false;
+    } finally {
+      setIsBlockchainRegistering(false);
+    }
+  };
+
+  // Form validation
+  const validateStep = (step: number) => {
     const newErrors: Record<string, string> = {};
     
-    // Role validation
-    if (!formData.role) {
-      newErrors.role = 'Please select a role';
+    if (step === 1) {
+      if (!formData.fullName.trim()) newErrors.fullName = 'Full name is required';
+      if (!formData.phoneNumber.trim()) newErrors.phoneNumber = 'Phone number is required';
+      if (!/^\d{10}$/.test(formData.phoneNumber)) newErrors.phoneNumber = 'Phone number must be 10 digits';
+      if (!formData.aadharNumber.trim()) newErrors.aadharNumber = 'Aadhar number is required';
+      if (!/^\d{12}$/.test(formData.aadharNumber)) newErrors.aadharNumber = 'Aadhar number must be 12 digits';
+      if (!formData.password) newErrors.password = 'Password is required';
+      if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
+      if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
     }
     
-    // Basic information validation
-    if (!formData.fullName.trim()) {
-      newErrors.fullName = 'Full name is required';
+    if (step === 2) {
+      if (!formData.role) newErrors.role = 'Role selection is required';
+      if (!formData.state) newErrors.state = 'State is required';
+      if (!formData.address?.trim()) newErrors.address = 'Address is required';
+      if (!formData.pincode?.trim()) newErrors.pincode = 'Pincode is required';
+      if (!/^\d{6}$/.test(formData.pincode || '')) newErrors.pincode = 'Pincode must be 6 digits';
     }
     
-    if (!formData.phoneNumber.trim()) {
-      newErrors.phoneNumber = 'Phone number is required';
-    } else if (!/^[6-9]\d{9}$/.test(formData.phoneNumber)) {
-      newErrors.phoneNumber = 'Invalid Indian phone number';
-    }
-    
-    if (!formData.aadharNumber.trim()) {
-      newErrors.aadharNumber = 'Aadhar number is required';
-    } else if (!/^\d{12}$/.test(formData.aadharNumber)) {
-      newErrors.aadharNumber = 'Aadhar number must be 12 digits';
-    }
-    
-    // Password validation
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-    
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+    if (step === 3) {
+      if (!isBlockchainConnected || !walletAddress) newErrors.wallet = 'Wallet connection is required';
     }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const sendOTP = async () => {
-    if (!formData.phoneNumber || !/^[6-9]\d{9}$/.test(formData.phoneNumber)) {
-      setErrors((prev) => ({ 
-        ...prev, 
-        phoneNumber: 'Please enter a valid phone number first' 
-      }));
-      return;
+  const handleNextStep = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep(prev => prev + 1);
     }
-    
-    setIsLoading(true);
-    try {
-      await apiFetch<{ success: boolean }>('/auth/send-otp', { method: 'POST', body: { phoneOrEmail: formData.phoneNumber } });
-      setOtpSent(true);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsLoading(false);
-    }
+  };
+
+  const handlePrevStep = () => {
+    setCurrentStep(prev => prev - 1);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) {
+    if (currentStep < 3) {
+      handleNextStep();
       return;
     }
     
-    // If OTP not sent yet, send it first
-    if (!otpSent) { 
-      await sendOTP(); 
-      return; 
-    }
-    
-    // Validate OTP
-    if (!otp || otp.length !== 6) { 
-      setErrors((prev) => ({ 
-        ...prev, 
-        otp: 'Please enter 6-digit OTP' 
-      })); 
-      return; 
-    }
+    if (!validateStep(3)) return;
     
     setIsLoading(true);
+    
     try {
-      await apiFetch('/auth/register', {
+      // Step 1: Register on blockchain if wallet is connected
+      if (isBlockchainConnected && walletAddress && formData.role !== 'consumer') {
+        const blockchainSuccess = await handleBlockchainRegistration();
+        if (blockchainSuccess) {
+          setFormData(prev => ({ ...prev, blockchainRegistered: true }));
+        }
+      }
+      
+      // Step 2: Register in database with all form data
+      const registrationData = {
+        ...formData,
+        walletAddress: walletAddress,
+        blockchainRegistered: formData.blockchainRegistered || false,
+        registrationTimestamp: new Date().toISOString()
+      };
+      
+      const response = await apiFetch('/auth/register', {
         method: 'POST',
-        body: { phoneOrEmail: formData.phoneNumber, password: formData.password, role: formData.role, name: formData.fullName },
+        body: registrationData,
       });
-      navigate('/login');
-    } catch (e) {
-      console.error(e);
+
+      if (!response) {
+        throw new Error('Registration failed - no response');
+      }
+
+      toast({
+        title: "Registration Successful!",
+        description: `Welcome ${formData.fullName}! Your account has been created.`,
+      });
+      
+      // Redirect to login after successful registration
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Registration error:', error);
+      toast({
+        title: "Registration Failed",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
@@ -194,413 +359,483 @@ const Register = () => {
 
   const renderRoleSpecificFields = () => {
     switch (formData.role) {
-      case 'farmer': 
+      case 'producer':
         return (
           <>
-            {/* <div>
-              <Label htmlFor="farmName">{t('farmName')} *</Label>
-              <Input 
-                id="farmName" 
-                value={formData.farmName || ''} 
-                onChange={(e) => handleInputChange('farmName', e.target.value)} 
-                className="mt-2" 
-                placeholder={t('enterFarmName')} 
-              />
-            </div> */}
             <div>
-              <Label htmlFor="farmLocation">{t('farmLocation')} *</Label>
-              <Input 
-                id="farmLocation" 
-                value={formData.farmLocation || ''} 
-                onChange={(e) => handleInputChange('farmLocation', e.target.value)} 
-                className="mt-2" 
-                placeholder={t('villageDistrictState')} 
+              <Label htmlFor="farmLocation">Farm Location *</Label>
+              <Input
+                id="farmLocation"
+                value={formData.farmLocation || ''}
+                onChange={(e) => handleInputChange('farmLocation', e.target.value)}
+                placeholder="Detailed farm location"
+                className="mt-2"
               />
             </div>
             <div>
-              <Label htmlFor="landSize">{t('landSize')} *</Label>
-              <Input 
-                id="landSize" 
-                value={formData.landSize || ''} 
-                onChange={(e) => handleInputChange('landSize', e.target.value)} 
-                className="mt-2" 
-                placeholder={t('acresHectares')} 
+              <Label htmlFor="landSize">Land Size</Label>
+              <Input
+                id="landSize"
+                value={formData.landSize || ''}
+                onChange={(e) => handleInputChange('landSize', e.target.value)}
+                placeholder="e.g., 5 acres, 2 hectares"
+                className="mt-2"
+              />
+            </div>
+            <div>
+              <Label htmlFor="cropTypes">Crop Types</Label>
+              <Input
+                id="cropTypes"
+                value={formData.cropTypes || ''}
+                onChange={(e) => handleInputChange('cropTypes', e.target.value)}
+                placeholder="e.g., Rice, Wheat, Vegetables"
+                className="mt-2"
               />
             </div>
           </>
         );
-      case 'distributor': 
+        
+      case 'quality-inspector':
         return (
           <>
             <div>
-              <Label htmlFor="companyName">{t('companyName')} *</Label>
-              <Input 
-                id="companyName" 
-                value={formData.companyName || ''} 
-                onChange={(e) => handleInputChange('companyName', e.target.value)} 
-                className="mt-2" 
-                placeholder={t('enterCompanyName')} 
+              <Label htmlFor="organizationName">Organization Name *</Label>
+              <Input
+                id="organizationName"
+                value={formData.organizationName || ''}
+                onChange={(e) => handleInputChange('organizationName', e.target.value)}
+                placeholder="Your organization name"
+                className="mt-2"
               />
             </div>
             <div>
-              <Label htmlFor="licenseNumber">{t('licenseNumber')} *</Label>
-              <Input 
-                id="licenseNumber" 
-                value={formData.licenseNumber || ''} 
-                onChange={(e) => handleInputChange('licenseNumber', e.target.value)} 
-                className="mt-2" 
-                placeholder={t('enterLicenseNumber')} 
+              <Label htmlFor="certificationDetails">Certification Details</Label>
+              <Textarea
+                id="certificationDetails"
+                value={formData.certificationDetails || ''}
+                onChange={(e) => handleInputChange('certificationDetails', e.target.value)}
+                placeholder="List your certifications and qualifications"
+                className="mt-2"
               />
             </div>
             <div>
-              <Label htmlFor="operatingRegion">{t('operatingRegion')} *</Label>
-              <Input 
-                id="operatingRegion" 
-                value={formData.operatingRegion || ''} 
-                onChange={(e) => handleInputChange('operatingRegion', e.target.value)} 
-                className="mt-2" 
-                placeholder={t('enterOperatingRegion')} 
+              <Label htmlFor="validationId">Validation ID *</Label>
+              <Input
+                id="validationId"
+                value={formData.validationId || ''}
+                onChange={(e) => handleInputChange('validationId', e.target.value)}
+                placeholder="Government issued validation ID"
+                className="mt-2"
               />
             </div>
           </>
         );
-      case 'retailer': 
+        
+      case 'retailer':
+      case 'distributor':
         return (
           <>
             <div>
-              <Label htmlFor="shopName">{t('shopName')} *</Label>
-              <Input 
-                id="shopName" 
-                value={formData.shopName || ''} 
-                onChange={(e) => handleInputChange('shopName', e.target.value)} 
-                className="mt-2" 
-                placeholder={t('enterShopName')} 
+              <Label htmlFor="businessName">Business Name *</Label>
+              <Input
+                id="businessName"
+                value={formData.businessName || ''}
+                onChange={(e) => handleInputChange('businessName', e.target.value)}
+                placeholder="Your company/business name"
+                className="mt-2"
               />
             </div>
             <div>
-              <Label htmlFor="shopLocation">{t('shopLocation')} *</Label>
-              <Input 
-                id="shopLocation" 
-                value={formData.shopLocation || ''} 
-                onChange={(e) => handleInputChange('shopLocation', e.target.value)} 
-                className="mt-2" 
-                placeholder={t('pinCode')} 
+              <Label htmlFor="licenseNumber">License Number</Label>
+              <Input
+                id="licenseNumber"
+                value={formData.licenseNumber || ''}
+                onChange={(e) => handleInputChange('licenseNumber', e.target.value)}
+                placeholder="Business license number"
+                className="mt-2"
               />
             </div>
             <div>
-              <Label htmlFor="gstNumber">{t('gstNumber')} *</Label>
-              <Input 
-                id="gstNumber" 
-                value={formData.gstNumber || ''} 
-                onChange={(e) => handleInputChange('gstNumber', e.target.value)} 
-                className="mt-2" 
-                placeholder={t('enterGstNumber')} 
+              <Label htmlFor="gstNumber">GST Number</Label>
+              <Input
+                id="gstNumber"
+                value={formData.gstNumber || ''}
+                onChange={(e) => handleInputChange('gstNumber', e.target.value)}
+                placeholder="GST registration number"
+                className="mt-2"
               />
             </div>
           </>
         );
-      case 'validator': 
-        return (
-          <>
-            <div>
-              <Label htmlFor="organizationName">{t('organizationName')} *</Label>
-              <Input 
-                id="organizationName" 
-                value={formData.organizationName || ''} 
-                onChange={(e) => handleInputChange('organizationName', e.target.value)} 
-                className="mt-2" 
-                placeholder={t('enterOrganizationName')} 
-              />
-            </div>
-            <div>
-              <Label htmlFor="designation">{t('designation')} *</Label>
-              <Input 
-                id="designation" 
-                value={formData.designation || ''} 
-                onChange={(e) => handleInputChange('designation', e.target.value)} 
-                className="mt-2" 
-                placeholder={t('enterDesignation')} 
-              />
-            </div>
-            <div>
-              <Label htmlFor="validationId">{t('validationId')} *</Label>
-              <Input 
-                id="validationId" 
-                value={formData.validationId || ''} 
-                onChange={(e) => handleInputChange('validationId', e.target.value)} 
-                className="mt-2" 
-                placeholder={t('governmentIssuedId')} 
-              />
-            </div>
-          </>
-        );
-      case 'consumer': 
-        return (
-          <>
-            <div>
-              <Label htmlFor="pinCode">{t('pinCode')} *</Label>
-              <Input 
-                id="pinCode" 
-                value={formData.pinCode || ''} 
-                onChange={(e) => handleInputChange('pinCode', e.target.value)} 
-                className="mt-2" 
-                placeholder={t('sixDigitPinCode')} 
-              />
-            </div>
-            <div>
-              <Label htmlFor="preferredLanguage">{t('preferredLanguage')} *</Label>
-              <Select 
-                value={formData.preferredLanguage || ''} 
-                onValueChange={(value) => handleInputChange('preferredLanguage', value)}
-              >
-                <SelectTrigger className="mt-2">
-                  <SelectValue placeholder={t('selectLanguage')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="english">{t('english')}</SelectItem>
-                  <SelectItem value="telugu">{t('telugu')}</SelectItem>
-                  <SelectItem value="hindi">{t('hindi')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </>
-        );
-      default: 
+        
+      default:
         return null;
     }
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background">
+      {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate('/')} className="gap-2">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate('/login')}
+            className="gap-2"
+          >
             <ArrowLeft className="w-4 h-4" />
-            Back to Home
+            Back to Login
           </Button>
           <LanguageSelector />
         </div>
       </header>
-      
-      <div className="container mx-auto px-4 py-1 max-w-6xl flex-grow">
-        <Card className="card-elevated">
-          <div className="px-4 py-2 sm:p-0">
-            <div className="text-center mb-6">
-              <h1 className="text-xl sm:text-3xl font-bold">{t('createAccount')}</h1>
-            </div>
-            
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Role Selection */}
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center justify-center gap-6">
-                  <h2 className="text-lg sm:text-xl font-semibold text-center">{t('selectYourRole')}</h2>
-                  <div className="flex flex-wrap justify-center gap-4 overflow-visible z-50">
-                    {roles.map((role) => {
-                      const isSelected = formData.role === role.value;
-                      const Icon = role.icon;
-                      
-                      return (
-                        <div 
-                          key={role.value} 
-                          className="flex flex-col items-center cursor-pointer transition-all duration-200 hover:scale-105" 
-                          onClick={() => handleInputChange('role', role.value)}
-                        >
-                          <div className={`
-                            w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200
-                            ${isSelected ? role.color : 'bg-gray-200'}
-                            ${isSelected ? 'shadow-lg scale-110' : role.hoverColor}
-                          `}>
-                            <Icon className={`w-6 h-6 ${
-                              isSelected ? 'text-white' : 'text-gray-600'
-                            }`} />
-                          </div>
-                          <div className="mt-2 text-center">
-                            <div className={`
-                              text-lg font-medium whitespace-normal break-words
-                              ${isSelected ? 'text-primary' : 'text-foreground'}
-                            `}>
-                              {t(role.labelKey)}
-                            </div>
-                          </div>
-                          {isSelected && (
-                            <div className={`w-2 h-2 rounded-full mt-1 ${role.color}`}></div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                {errors.role && <p className="text-red-500 text-sm text-center">{errors.role}</p>}
-              </div>
 
-              {/* Two Column Layout */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Left Column - Constant Fields */}
-                <div className="space-y-4">
-                  <h2 className="text-lg sm:text-xl font-semibold border-b pb-2 text-primary">
-                    {t('basicInformation')}
-                  </h2>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="fullName">{t('fullName')} *</Label>
-                      <Input 
-                        id="fullName" 
-                        value={formData.fullName} 
-                        onChange={(e) => handleInputChange('fullName', e.target.value)} 
-                        className="mt-2" 
-                        placeholder={t('enterFullName')} 
-                      />
-                      {errors.fullName && <p className="text-red-500 text-sm mt-1">{errors.fullName}</p>}
+      <div className="container mx-auto px-4 py-8 max-w-2xl">
+        <Card className="card-elevated">
+          <div className="p-6 sm:p-8">
+            <div className="text-center mb-8">
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
+                Create Your Account
+              </h1>
+              <p className="text-muted-foreground">
+                Step {currentStep} of 3: {
+                  currentStep === 1 ? 'Personal Information' :
+                  currentStep === 2 ? 'Role & Location Details' :
+                  'Blockchain Integration'
+                }
+              </p>
+            </div>
+
+            {/* Progress Indicator */}
+            <div className="flex items-center justify-center mb-8">
+              <div className="flex items-center">
+                {[1, 2, 3].map((step) => (
+                  <React.Fragment key={step}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                      step === currentStep ? 'bg-primary text-primary-foreground' :
+                      step < currentStep ? 'bg-green-500 text-white' : 'bg-muted text-muted-foreground'
+                    }`}>
+                      {step < currentStep ? <CheckCircle className="w-4 h-4" /> : step}
                     </div>
+                    {step < 3 && (
+                      <div className={`w-12 h-1 mx-2 ${
+                        step < currentStep ? 'bg-green-500' : 'bg-muted'
+                      }`} />
+                    )}
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Step 1: Personal Information */}
+              {currentStep === 1 && (
+                <div className="space-y-4">
+                  <h2 className="text-xl font-semibold text-center mb-6">Personal Information</h2>
+                  
+                  <div>
+                    <Label htmlFor="fullName">Full Name *</Label>
+                    <Input 
+                      id="fullName" 
+                      value={formData.fullName} 
+                      onChange={(e) => handleInputChange('fullName', e.target.value)} 
+                      className="mt-2" 
+                      placeholder="Enter your full name" 
+                    />
+                    {errors.fullName && <p className="text-red-500 text-sm mt-1">{errors.fullName}</p>}
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="aadharNumber">{t('aadharNumberLabel')} *</Label>
+                      <Label htmlFor="phoneNumber">Phone Number *</Label>
+                      <Input 
+                        id="phoneNumber" 
+                        value={formData.phoneNumber} 
+                        onChange={(e) => handleInputChange('phoneNumber', e.target.value)} 
+                        className="mt-2" 
+                        placeholder="10-digit mobile number"
+                        maxLength={10}
+                      />
+                      {errors.phoneNumber && <p className="text-red-500 text-sm mt-1">{errors.phoneNumber}</p>}
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="aadharNumber">Aadhar Number *</Label>
                       <Input 
                         id="aadharNumber" 
                         value={formData.aadharNumber} 
                         onChange={(e) => handleInputChange('aadharNumber', e.target.value)} 
                         className="mt-2" 
-                        placeholder={t('aadhar12Digit')} 
-                        maxLength={12} 
+                        placeholder="12-digit Aadhar number"
+                        maxLength={12}
                       />
                       {errors.aadharNumber && <p className="text-red-500 text-sm mt-1">{errors.aadharNumber}</p>}
                     </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="phoneNumber">{t('phoneNumber')} *</Label>
-                      <div className="flex flex-col gap-2 mt-2">
-                        <Input 
-                          id="phoneNumber" 
-                          value={formData.phoneNumber} 
-                          onChange={(e) => handleInputChange('phoneNumber', e.target.value)} 
-                          maxLength={10} 
-                          placeholder={t('mobile10Digit')}
-                          className="transition-colors duration-200 focus:ring-2"
-                        />
-                        {!otpSent && (
-                          <Button 
-                            type="button" 
-                            onClick={sendOTP} 
-                            disabled={isLoading || !formData.phoneNumber} 
-                            variant="outline"
-                            className="w-full transition-all duration-200"
-                          >
-                            {isLoading ? t('sending') : t('sendOTP')}
-                          </Button>
-                        )}
-                      </div>
-                      {errors.phoneNumber && <p className="text-red-500 text-sm mt-1">{errors.phoneNumber}</p>}
-                    </div>
-                    
-                    
-                    
-                    {otpSent && (
-                      <div>
-                        <Label htmlFor="otp">{t('enterOTP')} *</Label>
-                        <Input 
-                          id="otp" 
-                          value={otp} 
-                          onChange={(e) => setOtp(e.target.value)} 
-                          className="mt-2" 
-                          placeholder="6-digit OTP" 
-                          maxLength={6} 
-                        />
-                        {errors.otp && <p className="text-red-500 text-sm mt-1">{errors.otp}</p>}
-                      </div>
-                    )}
-                    
-                    <div>
-                      <Label htmlFor="password">{t('password')} *</Label>
-                      <div className="relative mt-2">
+                      <Label htmlFor="password">Password *</Label>
+                      <div className="relative">
                         <Input 
                           id="password" 
-                          type={showPassword ? 'text' : 'password'} 
+                          type={showPassword ? 'text' : 'password'}
                           value={formData.password} 
                           onChange={(e) => handleInputChange('password', e.target.value)} 
-                          className="pr-12" 
-                          placeholder={t('min6Chars')} 
+                          className="mt-2 pr-10" 
+                          placeholder="Enter password"
                         />
-                        <Button 
-                          type="button" 
-                          variant="ghost" 
-                          size="sm" 
-                          className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0" 
+                        <button
+                          type="button"
                           onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 mt-1"
                         >
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </Button>
+                        </button>
                       </div>
                       {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
                     </div>
                     
                     <div>
-                      <Label htmlFor="confirmPassword">{t('confirmPassword')} *</Label>
-                      <div className="relative mt-2">
+                      <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                      <div className="relative">
                         <Input 
                           id="confirmPassword" 
-                          type={showConfirmPassword ? 'text' : 'password'} 
+                          type={showConfirmPassword ? 'text' : 'password'}
                           value={formData.confirmPassword} 
                           onChange={(e) => handleInputChange('confirmPassword', e.target.value)} 
-                          className="pr-12" 
-                          placeholder={t('reenterPassword')} 
+                          className="mt-2 pr-10" 
+                          placeholder="Confirm password"
                         />
-                        <Button 
-                          type="button" 
-                          variant="ghost" 
-                          size="sm" 
-                          className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0" 
+                        <button
+                          type="button"
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 mt-1"
                         >
                           {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </Button>
+                        </button>
                       </div>
                       {errors.confirmPassword && <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>}
                     </div>
                   </div>
                 </div>
+              )}
 
-                {/* Right Column - Role-Specific Fields */}
+              {/* Step 2: Role & Location */}
+              {currentStep === 2 && (
                 <div className="space-y-4">
-                  <h2 className="text-lg sm:text-xl font-semibold border-b pb-2 text-primary">
-                    {formData.role ? t('additionalInformation') : t('selectRoleFirst')}
-                  </h2>
-                  {formData.role ? (
-                    <div className="space-y-4">
-                      {renderRoleSpecificFields()}
+                  <h2 className="text-xl font-semibold text-center mb-6">Role & Location Details</h2>
+                  
+                  {/* Role Selection */}
+                  <div className="space-y-4">
+                    <Label>Select Your Role *</Label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {roles.map((role) => {
+                        const isSelected = formData.role === role.value;
+                        const Icon = role.icon;
+                        
+                        return (
+                          <div 
+                            key={role.value} 
+                            className={`border-2 rounded-lg p-4 cursor-pointer transition-all duration-200 hover:shadow-md ${
+                              isSelected ? 'border-primary bg-primary/5' : 'border-muted-foreground/20 hover:border-primary/50'
+                            }`}
+                            onClick={() => handleInputChange('role', role.value)}
+                          >
+                            <div className="flex flex-col items-center text-center space-y-2">
+                              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                                isSelected ? role.color : 'bg-muted'
+                              }`}>
+                                <Icon className={`w-6 h-6 ${isSelected ? 'text-white' : 'text-muted-foreground'}`} />
+                              </div>
+                              <div>
+                                <p className="font-medium">{role.labelKey}</p>
+                                <p className="text-xs text-muted-foreground">{role.description}</p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  ) : (
-                    <div className="flex items-center justify-center h-64 text-center">
-                      <div className="text-muted-foreground">
-                        <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                        <p className="text-lg">{t('pleaseSelectRole')}</p>
-                        <p className="text-sm">{t('additionalFieldsWillAppear')}</p>
-                      </div>
+                    {errors.role && <p className="text-red-500 text-sm mt-1">{errors.role}</p>}
+                  </div>
+                  
+                  {/* Location Fields */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="state">State *</Label>
+                      <Select value={formData.state || ''} onValueChange={(value) => handleInputChange('state', value)}>
+                        <SelectTrigger className="mt-2">
+                          <SelectValue placeholder="Select state" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {indianStates.map((state) => (
+                            <SelectItem key={state} value={state}>
+                              {state}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors.state && <p className="text-red-500 text-sm mt-1">{errors.state}</p>}
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="district">District</Label>
+                      <Input 
+                        id="district" 
+                        value={formData.district || ''} 
+                        onChange={(e) => handleInputChange('district', e.target.value)} 
+                        className="mt-2" 
+                        placeholder="Enter district"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="address">Address *</Label>
+                    <Textarea 
+                      id="address" 
+                      value={formData.address || ''} 
+                      onChange={(e) => handleInputChange('address', e.target.value)} 
+                      className="mt-2" 
+                      placeholder="Enter your complete address"
+                      rows={3}
+                    />
+                    {errors.address && <p className="text-red-500 text-sm mt-1">{errors.address}</p>}
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="pincode">Pincode *</Label>
+                    <Input 
+                      id="pincode" 
+                      value={formData.pincode || ''} 
+                      onChange={(e) => handleInputChange('pincode', e.target.value)} 
+                      className="mt-2" 
+                      placeholder="6-digit pincode"
+                      maxLength={6}
+                    />
+                    {errors.pincode && <p className="text-red-500 text-sm mt-1">{errors.pincode}</p>}
+                  </div>
+                  
+                  {/* Role-specific fields */}
+                  {formData.role && (
+                    <div className="space-y-4 pt-4 border-t">
+                      <h3 className="text-lg font-semibold">
+                        {formData.role === 'producer' ? 'Farm Details' :
+                         formData.role === 'quality-inspector' ? 'Organization Details' :
+                         'Business Details'}
+                      </h3>
+                      {renderRoleSpecificFields()}
                     </div>
                   )}
                 </div>
+              )}
+
+              {/* Step 3: Blockchain Integration */}
+              {currentStep === 3 && (
+                <div className="space-y-6">
+                  <h2 className="text-xl font-semibold text-center mb-6">Blockchain Integration</h2>
+                  
+                  {/* Wallet Connection */}
+                  <div className="border rounded-lg p-6 bg-gradient-to-r from-blue-50 to-purple-50">
+                    <div className="flex items-center gap-3 mb-4">
+                      <Wallet className="w-6 h-6 text-blue-600" />
+                      <h3 className="text-lg font-semibold">Connect Your Wallet</h3>
+                      {isBlockchainConnected && <CheckCircle className="w-5 h-5 text-green-500" />}
+                    </div>
+                    
+                    {!isBlockchainConnected ? (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Connect your MetaMask wallet to enable secure blockchain features for transparent supply chain tracking.
+                        </p>
+                        <WalletConnection onConnect={handleWalletConnect} />
+                        {errors.wallet && <p className="text-red-500 text-sm mt-2">{errors.wallet}</p>}
+                      </div>
+                    ) : (
+                      <div className="bg-white rounded-lg p-4 border border-green-200">
+                        <div className="flex items-center gap-2 text-green-700 mb-2">
+                          <CheckCircle className="w-4 h-4" />
+                          <span className="font-medium">Wallet Connected Successfully!</span>
+                        </div>
+                        <Badge variant="secondary" className="bg-green-100 text-green-800">
+                          {formatAddress(walletAddress!)}
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Registration Summary */}
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold mb-4">Registration Summary</h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Name:</span>
+                        <span className="font-medium">{formData.fullName}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Role:</span>
+                        <span className="font-medium">{roles.find(r => r.value === formData.role)?.labelKey}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Location:</span>
+                        <span className="font-medium">{formData.state}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Wallet Status:</span>
+                        <span className={`font-medium ${isBlockchainConnected ? 'text-green-600' : 'text-orange-600'}`}>
+                          {isBlockchainConnected ? 'Connected' : 'Not Connected'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Navigation Buttons */}
+              <div className="flex justify-between pt-6">
+                {currentStep > 1 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handlePrevStep}
+                    className="px-6"
+                  >
+                    Previous
+                  </Button>
+                )}
+                
+                {currentStep < 3 ? (
+                  <Button
+                    type="button"
+                    onClick={handleNextStep}
+                    className="px-6 ml-auto"
+                  >
+                    Next Step
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="px-6 ml-auto bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700"
+                  >
+                    {isLoading ? 'Registering...' : 'Complete Registration'}
+                  </Button>
+                )}
               </div>
 
-              {/* Submit Button - Full Width */}
-              <div className="lg:col-span-2 mt-8">
-                <Button 
-                  type="submit" 
-                  className="w-full btn-primary transition-all duration-200 hover:scale-[1.02]" 
-                  size="lg" 
-                  disabled={isLoading || !formData.role}
-                >
-                  {isLoading ? t('creatingAccountLoading') : otpSent ? t('createAccountBtn') : t('sendOtpAndContinue')}
-                </Button>
-
-                <div className="text-center mt-6">
-                  <p className="text-muted-foreground text-sm">
-                    {t('alreadyHaveAccount')}{' '}
-                    <Button 
-                      variant="link" 
-                      onClick={() => navigate('/login')} 
-                      className="p-0 h-auto text-primary hover:underline transition-all duration-200"
-                    >
-                      {t('loginHere')}
-                    </Button>
-                  </p>
-                </div>
+              {/* Login Link */}
+              <div className="text-center pt-4">
+                <p className="text-muted-foreground text-sm">
+                  Already have an account?{' '}
+                  <Button 
+                    variant="link" 
+                    onClick={() => navigate('/login')} 
+                    className="p-0 h-auto text-primary hover:underline"
+                  >
+                    Sign In Here
+                  </Button>
+                </p>
               </div>
             </form>
           </div>

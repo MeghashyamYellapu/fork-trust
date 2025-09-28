@@ -14,13 +14,28 @@ const Index = () => {
   const { t } = useLanguage();
   const [showQRScanner, setShowQRScanner] = useState(false);
 
-  const handleQRScan = (result: string) => {
+  const handleQRScan = async (result: string) => {
     console.log('QR Code scanned:', result);
-    // Navigate to product details page with mock data
     setShowQRScanner(false);
-    // Generate mock product ID based on scanned result or use default
-    const productId = result || 'mock-tomatoes-batch-001';
-    navigate(`/product/${productId}`);
+    
+    try {
+      // Try to fetch product details from API using QR code
+      const response = await fetch(`http://localhost:4000/api/products/qr/${result}`);
+      
+      if (response.ok) {
+        const product = await response.json();
+        console.log('Product found:', product);
+        // Navigate to product details page with real product data
+        navigate(`/product/${product._id}`, { state: { product } });
+      } else {
+        console.log('Product not found for QR code:', result);
+        // Show error or fallback message
+        alert(`Product not found for QR code: ${result}`);
+      }
+    } catch (error) {
+      console.error('Error fetching product by QR:', error);
+      alert('Error scanning QR code. Please try again.');
+    }
   };
 
   const benefits = [

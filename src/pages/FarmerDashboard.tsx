@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, 
@@ -19,10 +19,10 @@ import {
   AlertCircle,
   Thermometer,
   Droplet,
-  Eye
+  Eye,
+  Wallet
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { apiFetch, getRole } from '@/lib/api';
 import { useMarketPrices } from '@/hooks/useMarketPrices';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useToast } from '@/hooks/use-toast';
+import { initWeb3, formatAddress } from '@/utils/web3';
+import { ethers } from 'ethers';
 
 interface Product {
   id: string;
@@ -74,6 +77,154 @@ interface ProductForm {
 const FarmerDashboard = () => {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  // Blockchain state
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [contract, setContract] = useState<ethers.Contract | null>(null);
+  const [isBlockchainConnected, setIsBlockchainConnected] = useState(false);
+  const [isRegisteredProducer, setIsRegisteredProducer] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
+  
+  // Register as producer function
+  const registerAsProducer = async () => {
+    if (!contract || !walletAddress) {
+      toast({
+        title: "Connection Error",
+        description: "Please connect your wallet first",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsRegistering(true);
+    try {
+      // Call registerProducer function on smart contract
+      const tx = await contract.registerProducer(walletAddress);
+      await tx.wait();
+      
+      toast({
+        title: "Registration Successful!",
+        description: "You are now registered as a producer on the blockchain",
+      });
+      
+      setIsRegisteredProducer(true);
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Producer registration failed:', err);
+      toast({
+        title: "Registration Failed",
+        description: err.message || "Failed to register as producer",
+        variant: "destructive"
+      });
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+  
+  // Initialize blockchain connection and check user registration
+  useEffect(() => {
+    const initDashboard = async () => {
+      try {
+        // First, check if user is authenticated and has the right role
+        const token = localStorage.getItem('token');
+        if (!token) {
+          toast({
+            title: "Authentication Required",
+            description: "Please log in to access the farmer dashboard",
+            variant: "destructive"
+          });
+          navigate('/login');
+          return;
+        }
+
+        // Verify user role from backend
+        const response = await fetch('http://localhost:4000/api/auth/verify', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Authentication failed');
+        }
+
+        const userData = await response.json();
+        
+        // Check if user has producer role
+        if (userData.user.role !== 'producer') {
+          toast({
+            title: "Access Denied",
+            description: "You need to be registered as a producer to access this dashboard",
+            variant: "destructive"
+          });
+          navigate('/login');
+          return;
+        }
+
+        // Initialize blockchain connection (optional)
+        try {
+          const { contract: web3Contract, account } = await initWeb3();
+          setContract(web3Contract);
+          setWalletAddress(account);
+          setIsBlockchainConnected(true);
+          
+          // Check if user is registered as producer on blockchain
+          const isProducer = await web3Contract.isProducerRegistered(account);
+          setIsRegisteredProducer(isProducer);
+          
+          if (!isProducer) {
+            console.log('User not registered on blockchain yet');
+          }
+        } catch (blockchainError) {
+          console.log('Blockchain connection failed, continuing without blockchain features:', blockchainError);
+          setIsBlockchainConnected(false);
+          setIsRegisteredProducer(false);
+        }
+      } catch (error) {
+        console.error('Dashboard initialization failed:', error);
+        
+        // Check if it's an authentication error or blockchain error
+        const token = localStorage.getItem('token');
+        if (!token) {
+          navigate('/login');
+          return;
+        }
+
+        // Try to verify authentication without blockchain
+        try {
+          const response = await fetch('http://localhost:4000/api/auth/verify', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          
+          if (!response.ok) {
+            throw new Error('Authentication failed');
+          }
+          
+          const userData = await response.json();
+          if (userData.user.role === 'producer') {
+            // User is authenticated, just blockchain failed
+            setIsBlockchainConnected(false);
+            setIsRegisteredProducer(false);
+            
+            toast({
+              title: "Limited Mode",
+              description: "Connected without blockchain features. Connect your wallet for full functionality.",
+              variant: "default"
+            });
+            return;
+          } else {
+            navigate('/login');
+          }
+        } catch (authError) {
+          console.error('Authentication verification failed:', authError);
+          navigate('/login');
+        }
+      }
+    };
+
+    initDashboard();
+  }, [toast, navigate]);
   
   // Generate IoT sensor data
   const generateIoTData = () => ({
@@ -285,7 +436,7 @@ const FarmerDashboard = () => {
         name: selectedResult.name,
         category: selectedResult.category,
         description: selectedResult.description,
-        quantity: selectedResult.estimatedQuantity,
+        quantity: selectedResult.estimatedQuantity.replace(/[^0-9.]/g, ''), // Extract only numbers
         price: selectedResult.estimatedPrice,
         organicType: selectedResult.organicType,
         expiryDate: expiryDate.toISOString().split('T')[0],
@@ -320,35 +471,147 @@ const FarmerDashboard = () => {
 
   const handleSubmitProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      const role = getRole();
-      if (role !== 'farmer') return;
-      const created = await apiFetch<any>('/products', {
-        method: 'POST',
-        auth: true,
-        body: {
-          name: productForm.name || 'unknown',
-          quantity: Number(productForm.quantity || 0),
-          pricePerKg: Number(productForm.price || 0),
-          harvestDate: productForm.harvestDate,
-          description: productForm.description,
-        },
+    
+    // Validate required fields
+    if (!productForm.name?.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Product name is required",
+        variant: "destructive"
       });
+      return;
+    }
+    
+    if (!productForm.quantity?.trim()) {
+      toast({
+        title: "Validation Error", 
+        description: "Quantity is required",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Extract numeric value from quantity (remove units like "kg", "units", etc.)
+    const numericQuantity = productForm.quantity.replace(/[^0-9.]/g, '');
+    if (!numericQuantity || isNaN(Number(numericQuantity)) || Number(numericQuantity) <= 0) {
+      toast({
+        title: "Validation Error", 
+        description: "Please enter a valid quantity (numbers only)",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!productForm.price?.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Price is required", 
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Extract numeric value from price
+    const numericPrice = productForm.price.replace(/[^0-9.]/g, '');
+    if (!numericPrice || isNaN(Number(numericPrice)) || Number(numericPrice) <= 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid price (numbers only)", 
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check if user is authenticated
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to add products",
+        variant: "destructive"
+      });
+      navigate('/login');
+      return;
+    }
+    
+    try {
+      // Try blockchain submission if available
+      if (isBlockchainConnected && contract && isRegisteredProducer) {
+        // Create product on blockchain
+        const tx = await contract.addProduct(
+          productForm.name || 'Unknown Product',
+          productForm.description || 'No description',
+          ethers.parseEther((Number(productForm.price) || 0).toString()),
+          productForm.farmLocation || 'Unknown Location'
+        );
+        
+        await tx.wait();
+        
+        toast({
+          title: "Success",
+          description: "Product added to blockchain successfully",
+        });
+      } else {
+        // Fallback: Add to local database via API
+        const productData = {
+          name: productForm.name.trim(),
+          description: productForm.description?.trim() || '',
+          quantity: Number(productForm.quantity.replace(/[^0-9.]/g, '')), // Clean numeric value
+          pricePerKg: Number(productForm.price.replace(/[^0-9.]/g, '')), // Clean numeric value
+          harvestDate: productForm.harvestDate || new Date().toISOString().split('T')[0],
+        };
+
+        console.log('Sending product data:', productData);
+
+        // Call backend API to save product
+        const response = await fetch('http://localhost:4000/api/products', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(productData)
+        });
+
+        const responseData = await response.json();
+        console.log('Backend response:', responseData);
+
+        if (!response.ok) {
+          throw new Error(responseData.message || 'Failed to save product');
+        }
+
+        console.log('Product saved to database:', responseData);
+        
+        toast({
+          title: "Success",
+          description: "Product added successfully and pending validation.",
+        });
+      }
+
+      // Add to local state for immediate UI update
+      const productId = Date.now(); // Temporary ID
       setProducts(prev => [{
-        id: created._id,
-        name: created.name,
-        quantity: created.quantity,
-        pricePerKg: created.pricePerKg,
-        harvestDate: created.harvestDate,
-        status: created.status,
-        validatorsApproved: created.validatorsApproved,
-        totalValidators: created.totalValidators,
+        id: productId.toString(),
+        name: productForm.name || 'Unknown Product',
+        quantity: Number(productForm.quantity.replace(/[^0-9.]/g, '') || 0),
+        pricePerKg: Number(productForm.price.replace(/[^0-9.]/g, '') || 0),
+        harvestDate: productForm.harvestDate || new Date().toISOString().split('T')[0],
+        status: 'pending',
+        validatorsApproved: 0,
+        totalValidators: 3,
       }, ...prev]);
-    } catch (e) {
-      console.error(e);
+      
+    } catch (e: unknown) {
+      const error = e as Error;
+      console.error('Product creation failed:', e);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add product",
+        variant: "destructive"
+      });
     } finally {
       setShowAddProduct(false);
-      const { mockGPS, mockIoT } = generateMockData();
+      // Reset form
       setProductForm({ 
         name: '', 
         quantity: '', 
@@ -364,29 +627,45 @@ const FarmerDashboard = () => {
         farmLocation: '',
         packagingDate: '',
       });
+      setUploadedImages([]);
+      setAnalysisResults(null);
     }
   };
 
-  React.useEffect(() => {
-    (async () => {
-      try {
-        const list = await apiFetch<any[]>('/products');
-        setProducts(list.map(p => ({
-          id: p._id,
-          name: p.name,
-          quantity: p.quantity,
-          pricePerKg: p.pricePerKg,
-          harvestDate: p.harvestDate,
-          status: p.status,
-          validatorsApproved: p.validatorsApproved,
-          totalValidators: p.totalValidators,
-          rejectionReason: p.rejectionReason,
-        })));
-      } catch (e) {
-        console.error(e);
+  const fetchProducts = useCallback(async () => {
+    if (!contract || !walletAddress) return;
+    
+    try {
+      // Get products from blockchain for this producer
+      const productCount = await contract.getProductCountByProducer(walletAddress);
+      const fetchedProducts = [];
+      
+      for (let i = 0; i < productCount; i++) {
+        const product = await contract.getProductByProducer(walletAddress, i);
+        fetchedProducts.push({
+          id: product.id.toString(),
+          name: product.name,
+          quantity: 0, // Not stored on blockchain yet
+          pricePerKg: Number(ethers.formatEther(product.price)),
+          harvestDate: new Date().toISOString().split('T')[0], // Default value
+          status: product.isActive ? 'active' : 'inactive',
+          validatorsApproved: 0, // Will be calculated from certifications
+          totalValidators: 3,
+        });
       }
-    })();
-  }, []);
+      
+      setProducts(fetchedProducts);
+    } catch (error) {
+      console.error('Failed to fetch products from blockchain:', error);
+      // Keep existing products if blockchain fetch fails
+    }
+  }, [contract, walletAddress]);
+
+  React.useEffect(() => {
+    if (isBlockchainConnected && contract && walletAddress) {
+      fetchProducts();
+    }
+  }, [isBlockchainConnected, contract, walletAddress, fetchProducts]);
 
   const getStatusColor = (status: Product['status']) => {
     switch (status) {
@@ -417,6 +696,14 @@ const FarmerDashboard = () => {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h1 className="text-xl font-bold text-foreground">{t('farmerDashboard')}</h1>
+            <div className="flex items-center gap-2">
+              {isBlockchainConnected && walletAddress && (
+                <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                  <Wallet className="w-3 h-3 mr-1" />
+                  Wallet Connected
+                </Badge>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <LanguageSelector />
@@ -433,6 +720,7 @@ const FarmerDashboard = () => {
       </header>
 
       <div className="container mx-auto px-4 py-6">
+
         {/* Navigation Tabs */}
         <div className="flex flex-wrap gap-2 mb-6">
           {[
@@ -445,7 +733,7 @@ const FarmerDashboard = () => {
             <Button
               key={tab.id}
               variant={activeTab === tab.id ? 'default' : 'outline'}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id as 'overview' | 'add-product' | 'pending' | 'pricing' | 'history')}
               className="gap-2"
             >
               <tab.icon className="w-4 h-4" />

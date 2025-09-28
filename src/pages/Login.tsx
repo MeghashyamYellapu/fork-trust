@@ -1,19 +1,23 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiFetch, saveAuth } from '@/lib/api';
-import { ArrowLeft, Phone, Lock, Eye, EyeOff, Smartphone } from 'lucide-react';
+import { ArrowLeft, Phone, Lock, Eye, EyeOff, Smartphone, Wallet } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageSelector } from '@/components/LanguageSelector';
+import { WalletConnection } from '@/components/WalletConnection';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
+import { initWeb3, CONTRACT_ABI, CONTRACT_ADDRESS } from '@/utils/web3';
+import { ethers } from 'ethers';
 
 const Login = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const [loginMethod, setLoginMethod] = useState<'password' | 'otp'>('password');
+  const { toast } = useToast();
+  const [loginMethod, setLoginMethod] = useState<'password' | 'otp' | 'wallet'>('wallet');
   const [formData, setFormData] = useState({
     phoneOrEmail: '',
     password: '',
@@ -23,12 +27,87 @@ const Login = () => {
   const [otpSent, setOtpSent] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  // Blockchain wallet login
+  const handleWalletLogin = async (address: string) => {
+    setWalletAddress(address);
+    setIsLoading(true);
+    
+    try {
+      console.log('🔍 Attempting wallet login with address:', address);
+      
+      // First, check if user exists in backend with this wallet address
+      const response = await fetch('http://localhost:4000/api/auth/wallet-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          walletAddress: address
+        })
+      });
+
+      const data = await response.json();
+      console.log('🔍 Wallet login response:', { status: response.status, data });
+
+      if (response.ok && data.success) {
+        // User found in backend database
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+
+        toast({
+          title: "Wallet Login Successful",
+          description: `Welcome back, ${data.user.fullName}!`,
+        });
+
+        // Navigate based on user role from database
+        const roleRoutingMap: { [key: string]: string } = {
+          'producer': '/dashboard/farmer',
+          'quality-inspector': '/dashboard/validator', 
+          'distributor': '/dashboard/distributor',
+          'retailer': '/dashboard/retailer',
+          'consumer': '/dashboard/consumer'
+        };
+
+        const route = roleRoutingMap[data.user.role] || '/';
+        navigate(route);
+      } else {
+        // User not found in backend, show helpful message
+        console.log('❌ Wallet not found in database. Response:', data.message);
+        
+        toast({
+          title: "Wallet Not Registered",
+          description: `This wallet address is not linked to any account. Please register or use a different login method.`,
+          variant: "default"
+        });
+        
+        // Suggest registration with pre-filled wallet
+        navigate('/register', { 
+          state: { 
+            walletAddress: address,
+            fromWalletLogin: true
+          } 
+        });
+      }
+      
+    } catch (error) {
+      console.error('❌ Wallet login error:', error);
+      toast({
+        title: "Wallet Login Failed", 
+        description: "Please ensure you're connected to the correct network and the backend server is running.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -40,10 +119,36 @@ const Login = () => {
 
     setIsLoading(true);
     try {
-      await apiFetch<{ success: boolean }>('/auth/send-otp', { method: 'POST', body: { phoneOrEmail: formData.phoneOrEmail } });
-      setOtpSent(true);
-    } catch (e) {
-      console.error(e);
+      const response = await fetch('http://localhost:4000/api/auth/send-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          phoneOrEmail: formData.phoneOrEmail
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setOtpSent(true);
+        toast({
+          title: "OTP Sent",
+          description: "Please check your phone for the OTP",
+        });
+      } else {
+        throw new Error(data.message || 'Failed to send OTP');
+      }
+    } catch (error) {
+      console.error('OTP send error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send OTP';
+      setErrors(prev => ({ ...prev, phoneOrEmail: errorMessage }));
+      toast({
+        title: "Failed to send OTP",
+        description: errorMessage,
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
@@ -68,14 +173,57 @@ const Login = () => {
 
     setIsLoading(true);
     try {
-      const data = await apiFetch<{ token: string; role: string; name?: string }>('/auth/login', {
+      // Real backend authentication
+      const response = await fetch('http://localhost:4000/api/auth/login', {
         method: 'POST',
-        body: { phoneOrEmail: formData.phoneOrEmail, password: formData.password },
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          phoneOrEmail: formData.phoneOrEmail,
+          password: formData.password
+        })
       });
-      saveAuth(data.token, data.role, data.name);
-      navigate(`/dashboard/${data.role}`);
-    } catch (e: any) {
-      setErrors({ password: e?.message || 'Login failed' });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
+
+      if (data.success) {
+        // Store token in localStorage
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+
+        toast({
+          title: "Login Successful",
+          description: `Welcome back, ${data.user.fullName}!`,
+        });
+
+        // Navigate based on user role
+        const roleRoutingMap: { [key: string]: string } = {
+          'producer': '/dashboard/farmer',
+          'quality-inspector': '/dashboard/validator', 
+          'distributor': '/dashboard/distributor',
+          'retailer': '/dashboard/retailer',
+          'consumer': '/dashboard/consumer'
+        };
+
+        const route = roleRoutingMap[data.user.role] || '/';
+        navigate(route);
+      } else {
+        throw new Error(data.message || 'Login failed');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Login failed. Please try again.';
+      setErrors({ password: errorMessage });
+      toast({
+        title: "Login Failed",
+        description: errorMessage,
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
@@ -96,15 +244,57 @@ const Login = () => {
 
     setIsLoading(true);
     try {
-      // For now, reuse password login structure after OTP sent
-      const data = await apiFetch<{ token: string; role: string; name?: string }>('/auth/login', {
+      // Real OTP verification with backend
+      const response = await fetch('http://localhost:4000/api/auth/verify-otp', {
         method: 'POST',
-        body: { phoneOrEmail: formData.phoneOrEmail, password: formData.otp },
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          phoneOrEmail: formData.phoneOrEmail,
+          otp: formData.otp
+        })
       });
-      saveAuth(data.token, data.role, data.name);
-      navigate(`/dashboard/${data.role}`);
-    } catch (e: any) {
-      setErrors({ otp: e?.message || 'OTP login failed' });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'OTP verification failed');
+      }
+
+      if (data.success) {
+        // Store token and user data
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+
+        toast({
+          title: "OTP Verified",
+          description: `Welcome, ${data.user.fullName}!`,
+        });
+
+        // Navigate based on user role
+        const roleRoutingMap: { [key: string]: string } = {
+          'producer': '/dashboard/farmer',
+          'quality-inspector': '/dashboard/validator', 
+          'distributor': '/dashboard/distributor',
+          'retailer': '/dashboard/retailer',
+          'consumer': '/dashboard/consumer'
+        };
+
+        const route = roleRoutingMap[data.user.role] || '/';
+        navigate(route);
+      } else {
+        throw new Error(data.message || 'OTP verification failed');
+      }
+    } catch (error) {
+      console.error('OTP verification error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'OTP verification failed';
+      setErrors({ otp: errorMessage });
+      toast({
+        title: "OTP Verification Failed",
+        description: errorMessage,
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
@@ -135,8 +325,12 @@ const Login = () => {
               <p className="text-muted-foreground">{t('signInToAccount')}</p>
             </div>
 
-            <Tabs value={loginMethod} onValueChange={(value) => setLoginMethod(value as 'password' | 'otp')}>
-              <TabsList className="grid w-full grid-cols-2 mb-6">
+            <Tabs value={loginMethod} onValueChange={(value) => setLoginMethod(value as 'password' | 'otp' | 'wallet')}>
+              <TabsList className="grid w-full grid-cols-3 mb-6">
+                <TabsTrigger value="wallet" className="text-sm">
+                  <Wallet className="w-4 h-4 mr-2" />
+                  Wallet
+                </TabsTrigger>
                 <TabsTrigger value="password" className="text-sm">
                   <Lock className="w-4 h-4 mr-2" />
                   {t('password')}
@@ -146,6 +340,18 @@ const Login = () => {
                   {t('otp')}
                 </TabsTrigger>
               </TabsList>
+
+              <TabsContent value="wallet">
+                <div className="space-y-6">
+                  <div className="text-center">
+                    <h3 className="text-lg font-semibold mb-2">Connect with MetaMask</h3>
+                    <p className="text-sm text-muted-foreground mb-6">
+                      Connect your wallet to access your blockchain role
+                    </p>
+                  </div>
+                  <WalletConnection onConnect={handleWalletLogin} />
+                </div>
+              </TabsContent>
 
               <TabsContent value="password">
                 <form onSubmit={handlePasswordLogin} className="space-y-6">
@@ -301,6 +507,20 @@ const Login = () => {
                   {t('register')}
                 </Button>
               </p>
+              
+              <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border">
+                <p className="text-sm text-muted-foreground mb-2">
+                  Want secure blockchain-based access?
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate('/blockchain-register')}
+                  className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white border-none hover:from-blue-600 hover:to-purple-700 transition-all duration-200"
+                >
+                  🔗 Register with Blockchain & Wallet
+                </Button>
+              </div>
             </div>
           </div>
         </Card>
