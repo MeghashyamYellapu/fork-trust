@@ -495,7 +495,7 @@ export async function walletLogin(req: Request, res: Response) {
 
     // Find user by wallet address (case-insensitive)
     const user = await User.findOne({ 
-      walletAddress: { $regex: new RegExp(`^${walletAddress.replace('0x', '')}$`, 'i') }
+      walletAddress: { $regex: new RegExp(`^${walletAddress}$`, 'i') }
     });
     
     if (!user) {

@@ -9,6 +9,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { useToast } from "@/hooks/use-toast";
 import { QRCodeButton } from "@/components/QRCodeDisplay";
+import { getWalletAddress, formatWalletAddress } from "@/utils/auth";
 import coconut from "@/assets/coconut.avif";
 import tomato from "@/assets/Tomatoes.avif";
 import red from "@/assets/redchillies.avif";
@@ -27,7 +28,8 @@ import {
   Clock,
   CheckCircle2,
   LogOut,
-  Store
+  Store,
+  Wallet
 } from "lucide-react";
 
 interface Product {
@@ -244,6 +246,16 @@ const RetailerDashboard = () => {
                 <h1 className="text-xl font-bold text-foreground">Retailer Dashboard</h1>
                 <p className="text-xs text-muted-foreground">Retail Inventory Management</p>
               </div>
+              {/* Show wallet address */}
+              {(() => {
+                const authWallet = getWalletAddress();
+                return authWallet ? (
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                    <Wallet className="w-3 h-3 mr-1" />
+                    {formatWalletAddress(authWallet)}
+                  </Badge>
+                ) : null;
+              })()}
             </div>
             <div className="flex items-center space-x-3">
               <Badge variant="secondary" className="text-sm px-3 py-1">

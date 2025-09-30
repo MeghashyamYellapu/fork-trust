@@ -20,7 +20,9 @@ import {
   Thermometer,
   Droplet,
   Eye,
-  Wallet
+  Wallet,
+  Leaf,
+  Activity
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useMarketPrices } from '@/hooks/useMarketPrices';
@@ -36,6 +38,8 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { initWeb3, formatAddress } from '@/utils/web3';
+import { getWalletAddress, formatWalletAddress } from '@/utils/auth';
+import { fetchOrganicStatusFromIoT, getOrganicStatusInfo, type IoTSensorData } from '@/services/organicIoT';
 import { ethers } from 'ethers';
 
 interface Product {
@@ -60,11 +64,7 @@ interface ProductForm {
   category: string;
   expiryDate: string;
   batchNumber: string;
-  iotSensorData: {
-    temperature: number;
-    humidity: number;
-    lastUpdated: string;
-  };
+  iotSensorData: IoTSensorData;
   gpsCoordinates: {
     latitude: number;
     longitude: number;
@@ -225,13 +225,81 @@ const FarmerDashboard = () => {
 
     initDashboard();
   }, [toast, navigate]);
+
+  // Initialize IoT data on component mount
+  useEffect(() => {
+    const initializeIoT = async () => {
+      await fetchIoTData();
+    };
+    initializeIoT();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   
-  // Generate IoT sensor data
-  const generateIoTData = () => ({
-    temperature: Math.round(Math.random() * (33 - 18) + 18), // 18-33°C
-    humidity: Math.round(Math.random() * (80 - 40) + 40), // 40-80%
-    lastUpdated: new Date().toISOString()
-  });
+  // State for IoT data
+  const [iotData, setIotData] = useState<IoTSensorData | null>(null);
+  const [isLoadingIoT, setIsLoadingIoT] = useState(false);
+  
+  // Fetch IoT organic status
+  const fetchIoTData = async () => {
+    setIsLoadingIoT(true);
+    try {
+      const data = await fetchOrganicStatusFromIoT();
+      setIotData(data);
+      
+      // Update form with IoT data
+      setProductForm(prev => ({
+        ...prev,
+        iotSensorData: data,
+        organicType: data.organicData.organicStatus,
+        gpsCoordinates: data.gpsCoordinates
+      }));
+      
+      toast({
+        title: "IoT Data Updated",
+        description: `Organic status: ${getOrganicStatusInfo(data.organicData.organicStatus).label}`,
+      });
+    } catch (error) {
+      console.error('Failed to fetch IoT data:', error);
+      toast({
+        title: "IoT Connection Failed", 
+        description: "Using cached data",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingIoT(false);
+    }
+  };
+
+  // Generate initial IoT data
+  const generateInitialIoTData = async (): Promise<IoTSensorData> => {
+    try {
+      return await fetchOrganicStatusFromIoT();
+    } catch (error) {
+      // Fallback data if service fails
+      return {
+        organicData: {
+          organicStatus: 'natural',
+          soilPH: 6.5,
+          nitrogenLevel: 25,
+          pesticideResidueLevel: 0.2,
+          microorganismCount: 650000,
+          organicMatterPercentage: 4.2,
+          lastTested: new Date().toISOString(),
+          deviceId: 'IOT_FALLBACK_001',
+          confidence: 85,
+          recommendations: ['Continue current organic practices', 'Monitor soil health monthly']
+        },
+        environmentalData: {
+          temperature: Math.round(Math.random() * (33 - 18) + 18),
+          humidity: Math.round(Math.random() * (80 - 40) + 40),
+          lastUpdated: new Date().toISOString()
+        },
+        gpsCoordinates: {
+          latitude: Math.round((Math.random() * (28 - 20) + 20) * 1000000) / 1000000,
+          longitude: Math.round((Math.random() * (87 - 77) + 77) * 1000000) / 1000000
+        }
+      };
+    }
+  };
 
   // Generate GPS coordinates (Indian agricultural belt)
   const generateGPSCoordinates = () => ({
@@ -261,7 +329,29 @@ const FarmerDashboard = () => {
     category: '',
     expiryDate: '',
     batchNumber: generateBatchNumber(),
-    iotSensorData: generateIoTData(),
+    iotSensorData: {
+      organicData: {
+        organicStatus: 'natural',
+        soilPH: 6.5,
+        nitrogenLevel: 25,
+        pesticideResidueLevel: 0.2,
+        microorganismCount: 650000,
+        organicMatterPercentage: 4.2,
+        lastTested: new Date().toISOString(),
+        deviceId: 'IOT_INIT_001',
+        confidence: 85,
+        recommendations: ['Loading IoT data...']
+      },
+      environmentalData: {
+        temperature: 25,
+        humidity: 60,
+        lastUpdated: new Date().toISOString()
+      },
+      gpsCoordinates: {
+        latitude: 24.0,
+        longitude: 82.0
+      }
+    },
     gpsCoordinates: generateGPSCoordinates(),
     organicType: '',
     farmLocation: '',
@@ -347,10 +437,7 @@ const FarmerDashboard = () => {
   };
 
   const refreshIoTData = () => {
-    setProductForm(prev => ({
-      ...prev,
-      iotSensorData: generateIoTData()
-    }));
+    fetchIoTData();
   };
 
   const refreshGPSCoordinates = () => {
@@ -441,7 +528,7 @@ const FarmerDashboard = () => {
         organicType: selectedResult.organicType,
         expiryDate: expiryDate.toISOString().split('T')[0],
         // Refresh IoT and GPS data for new product
-        iotSensorData: generateIoTData(),
+        iotSensorData: iotData || productForm.iotSensorData,
         gpsCoordinates: generateGPSCoordinates(),
         batchNumber: generateBatchNumber(),
       }));
@@ -611,7 +698,8 @@ const FarmerDashboard = () => {
       });
     } finally {
       setShowAddProduct(false);
-      // Reset form
+      // Reset form with initial data
+      const initialIoTData = await generateInitialIoTData();
       setProductForm({ 
         name: '', 
         quantity: '', 
@@ -621,7 +709,7 @@ const FarmerDashboard = () => {
         category: '',
         expiryDate: '',
         batchNumber: generateBatchNumber(),
-        iotSensorData: generateIoTData(),
+        iotSensorData: initialIoTData,
         gpsCoordinates: generateGPSCoordinates(),
         organicType: '',
         farmLocation: '',
@@ -695,7 +783,7 @@ const FarmerDashboard = () => {
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold text-foreground">{t('farmerDashboard')}</h1>
+            <h1 className="text-xl font-bold text-foreground">{t('Farmer Dashboard')}</h1>
             <div className="flex items-center gap-2">
               {isBlockchainConnected && walletAddress && (
                 <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
@@ -703,6 +791,16 @@ const FarmerDashboard = () => {
                   Wallet Connected
                 </Badge>
               )}
+              {/* Always show wallet address from auth token */}
+              {(() => {
+                const authWallet = getWalletAddress();
+                return authWallet ? (
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                    <Wallet className="w-3 h-3 mr-1" />
+                    {formatWalletAddress(authWallet)}
+                  </Badge>
+                ) : null;
+              })()}
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -979,7 +1077,7 @@ const FarmerDashboard = () => {
                     {/* Quantity */}
                     <div>
                       <Label htmlFor="quantity" className="text-base sm:text-lg">
-                        {language === 'en' ? 'Quantity' : 'मात्रा'} *
+                        {language === 'en' ? 'Quantity(fetched from sensors)' : 'मात्रा'} *
                       </Label>
                       <Input
                         id="quantity"
@@ -1063,10 +1161,10 @@ const FarmerDashboard = () => {
                       </p>
                     </div>
 
-                    {/* IoT Sensor Data Display */}
+                    {/* IoT Organic Status Data Display */}
                     <div>
                       <Label className="text-base sm:text-lg">
-                        {language === 'en' ? 'IoT Sensor Data' : 'IoT सेंसर डेटा'}
+                        {language === 'en' ? 'IoT Organic Status' : 'IoT जैविक स्थिति'}
                       </Label>
                       <div className="mt-2 p-3 sm:p-4 bg-green-50 rounded-lg border border-green-200">
                         <div className="flex items-center gap-2 mb-3">
@@ -1076,22 +1174,44 @@ const FarmerDashboard = () => {
                           </span>
                           <Button
                             type="button"
-                            onClick={refreshIoTData}
+                            onClick={fetchIoTData}
+                            disabled={isLoadingIoT}
                             size="sm"
                             variant="outline"
                             className="ml-auto p-1 sm:p-2"
                           >
-                            <RefreshCw size={12} className="sm:hidden" />
-                            <RefreshCw size={14} className="hidden sm:block" />
+                            <RefreshCw size={12} className={`sm:hidden ${isLoadingIoT ? 'animate-spin' : ''}`} />
+                            <RefreshCw size={14} className={`hidden sm:block ${isLoadingIoT ? 'animate-spin' : ''}`} />
                           </Button>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                          <div className="flex items-center gap-1 sm:gap-2 p-2 bg-white rounded border">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                          {/* Organic Status */}
+                          <div className="col-span-full">
+                            <div className="p-3 bg-white rounded border">
+                              {(() => {
+                                const statusInfo = getOrganicStatusInfo(productForm.iotSensorData.organicData.organicStatus);
+                                return (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-lg">{statusInfo.icon}</span>
+                                    <div>
+                                      <p className="text-xs text-gray-600">{language === 'en' ? 'Organic Status' : 'जैविक स्थिति'}</p>
+                                      <p className={`font-semibold text-xs sm:text-sm px-2 py-1 rounded ${statusInfo.color}`}>
+                                        {statusInfo.label}
+                                      </p>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          </div>
+                          
+                          {/* Environmental Data */}
+                          {/* <div className="flex items-center gap-1 sm:gap-2 p-2 bg-white rounded border">
                             <Thermometer className="text-red-500" size={14} />
                             <div>
                               <p className="text-xs text-gray-600">{language === 'en' ? 'Temp' : 'तापमान'}</p>
-                              <p className="font-semibold text-xs sm:text-sm">{productForm.iotSensorData.temperature}°C</p>
+                              <p className="font-semibold text-xs sm:text-sm">{productForm.iotSensorData.environmentalData.temperature}°C</p>
                             </div>
                           </div>
                           
@@ -1099,9 +1219,34 @@ const FarmerDashboard = () => {
                             <Droplet className="text-blue-500" size={14} />
                             <div>
                               <p className="text-xs text-gray-600">{language === 'en' ? 'Humidity' : 'आर्द्रता'}</p>
-                              <p className="font-semibold text-xs sm:text-sm">{productForm.iotSensorData.humidity}%</p>
+                              <p className="font-semibold text-xs sm:text-sm">{productForm.iotSensorData.environmentalData.humidity}%</p>
+                            </div>
+                          </div> */}
+
+                          {/* Soil Health Indicators */}
+                          <div className="flex items-center gap-1 sm:gap-2 p-2 bg-white rounded border">
+                            <Activity className="text-green-500" size={14} />
+                            <div>
+                              <p className="text-xs text-gray-600">{language === 'en' ? 'Soil pH' : 'मिट्टी pH'}</p>
+                              <p className="font-semibold text-xs sm:text-sm">{productForm.iotSensorData.organicData.soilPH}</p>
                             </div>
                           </div>
+                          
+                          <div className="flex items-center gap-1 sm:gap-2 p-2 bg-white rounded border">
+                            <Leaf className="text-emerald-500" size={14} />
+                            <div>
+                              <p className="text-xs text-gray-600">{language === 'en' ? 'Confidence' : 'विश्वास'}</p>
+                              <p className="font-semibold text-xs sm:text-sm">{productForm.iotSensorData.organicData.confidence}%</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Device Info */}
+                        <div className="mt-3 pt-2 border-t border-green-200">
+                          <p className="text-xs text-green-600">
+                            Device: {productForm.iotSensorData.organicData.deviceId} | 
+                            Last Test: {new Date(productForm.iotSensorData.organicData.lastTested).toLocaleString()}
+                          </p>
                         </div>
                       </div>
                     </div>

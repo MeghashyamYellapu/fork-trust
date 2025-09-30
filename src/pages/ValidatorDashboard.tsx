@@ -15,7 +15,8 @@ import {
   Calendar,
   MapPin,
   User,
-  Package
+  Package,
+  Wallet
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageSelector } from '@/components/LanguageSelector';
@@ -25,6 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { getWalletAddress, formatWalletAddress } from '@/utils/auth';
 
 interface PendingProduct {
   id: string;
@@ -246,6 +248,16 @@ const ValidatorDashboard = () => {
           <div className="flex items-center gap-4">
             <Shield className="w-8 h-8 text-primary" />
             <h1 className="text-xl font-bold text-foreground">{t('validatorDashboard')}</h1>
+            {/* Show wallet address */}
+            {(() => {
+              const authWallet = getWalletAddress();
+              return authWallet ? (
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                  <Wallet className="w-3 h-3 mr-1" />
+                  {formatWalletAddress(authWallet)}
+                </Badge>
+              ) : null;
+            })()}
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm">

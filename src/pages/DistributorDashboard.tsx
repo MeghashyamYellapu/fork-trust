@@ -9,7 +9,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { useToast } from "@/hooks/use-toast";
 import { QRCodeButton } from "@/components/QRCodeDisplay";
-import { Star, MapPin, Filter, ShoppingCart, Truck, Package, CheckCircle, LogOut } from "lucide-react";
+import { getWalletAddress, formatWalletAddress } from "@/utils/auth";
+import { Star, MapPin, Filter, ShoppingCart, Truck, Package, CheckCircle, LogOut, Wallet } from "lucide-react";
 
 interface Product {
   _id: string;
@@ -185,6 +186,16 @@ const DistributorDashboard = () => {
                 <h1 className="text-xl font-bold text-foreground">{t('distributorDashboard')}</h1>
                 <p className="text-xs text-muted-foreground">Product Distribution & Logistics</p>
               </div>
+              {/* Show wallet address */}
+              {(() => {
+                const authWallet = getWalletAddress();
+                return authWallet ? (
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                    <Wallet className="w-3 h-3 mr-1" />
+                    {formatWalletAddress(authWallet)}
+                  </Badge>
+                ) : null;
+              })()}
             </div>
             <div className="flex items-center space-x-3">
               <Badge variant="secondary" className="text-sm px-3 py-1">
